@@ -45,4 +45,25 @@ router.post('/logout', (req, res) => {
   res.json({ ok: true })
 })
 
+// LOCAL DEMO ONLY: passwordless demo session for the seeded Business Owner.
+// Active only when QUBWATCH_DEMO_LOGIN=1 is set in the backend environment
+// (local assessment runs; never production). Without the flag this route
+// behaves as if absent. Uses the existing session + HttpOnly cookie
+// mechanism; no credential is accepted or returned here.
+router.post('/demo', (req, res) => {
+  if (process.env.QUBWATCH_DEMO_LOGIN !== '1') {
+    res.status(404).json({ error: 'Not found' })
+    return
+  }
+  const db = getDb()
+  const user = db.prepare('SELECT * FROM users WHERE id = ?').get('user-owner')
+  if (!user) {
+    res.status(404).json({ error: 'Demo user not available' })
+    return
+  }
+  const token = createSession(db, user.id)
+  setSessionCookie(res, token)
+  res.json({ user: safeUser(user) })
+})
+
 export default router

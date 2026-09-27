@@ -12,6 +12,12 @@ import Notifications from './pages/Notifications.jsx'
 import { DEMO_THRESHOLDS } from '../shared/rules.js'
 import { api } from './api/client.js'
 
+// LOCAL DEMO ONLY: when the dev server is started with VITE_QUBWATCH_DEMO=1
+// (local .env.local, never committed), the app may establish a demo session
+// via POST /api/auth/demo instead of showing the Login page. Production
+// builds omit the flag, so this is always false there.
+const DEMO_AUTOLOGIN = import.meta.env.VITE_QUBWATCH_DEMO === '1'
+
 // Stage 6 frontend API migration: the backend is the source of truth.
 // Pages keep the same props and UI; only the data layer changed.
 // No ML, no AI, no autonomous decisions.
@@ -78,7 +84,11 @@ function App() {
   useEffect(() => {
     let cancelled = false
     async function boot() {
-      const me = await api.get('/auth/me')
+      let me = await api.get('/auth/me')
+      if (!me.ok && DEMO_AUTOLOGIN) {
+        const demo = await api.post('/auth/demo')
+        if (demo.ok) me = await api.get('/auth/me')
+      }
       if (cancelled) return
       if (!me.ok) {
         setSession({ status: 'ready', user: null })

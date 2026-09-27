@@ -80,6 +80,44 @@ Create a production frontend build:
 npm run build
 ```
 
+## Local demo mode (LOCAL ONLY — never production)
+
+For local assessment/demo runs, the actual QubWatch dashboard can open
+directly without typing a login, while keeping the full authentication
+system intact. Both flags below are required at the same time:
+
+1. Create a local-only frontend flag file named `.env.local` (already
+   ignored by `.gitignore`, never commit it) containing:
+
+```text
+VITE_QUBWATCH_DEMO=1
+```
+
+2. Start the API server with the local-only backend flag:
+
+```sh
+QUBWATCH_DEMO_LOGIN=1 npm run dev:api
+```
+
+(PowerShell: `$env:QUBWATCH_DEMO_LOGIN = '1'; npm run dev:api`)
+
+3. Start the frontend and open it:
+
+```sh
+npm run dev
+```
+
+Then opening `https://localhost:5173/` loads the dashboard directly as the
+seeded Business Owner through the existing HttpOnly session mechanism and
+the existing API. Login, logout, role permissions, and protected routes all
+behave normally; after a manual logout the Login page shows until the next
+reload. Without both flags, the application behaves exactly as production:
+unauthenticated visitors see the Login page and `POST /api/auth/demo`
+returns 404.
+
+Do not set `QUBWATCH_DEMO_LOGIN` in any production environment and do not
+commit `.env.local` or any credentials to the repository.
+
 ## Prototype preview
 
 The repository contains a self-contained `design.html` preview so the prototype can be rendered directly by an HTML preview service without requiring the React development server or external assets.
