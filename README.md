@@ -51,7 +51,7 @@ server/
 docs/
   PRD.md                  Product requirements and implementation notes
 
-design.html               Standalone prototype/design preview for assessment
+design.html               Standalone prototype/design preview for design review
 ```
 
 ## Run locally
@@ -82,7 +82,7 @@ npm run build
 
 ## Local demo mode (LOCAL ONLY — never production)
 
-For local assessment/demo runs, the actual QubWatch dashboard can open
+For local demonstration runs, the actual QubWatch dashboard can open
 directly without typing a login, while keeping the full authentication
 system intact. Both flags below are required at the same time:
 
@@ -132,7 +132,7 @@ The repository contains a self-contained `design.html` preview so the prototype 
 6. Mobile Application
 7. Testing and Demonstration
 
-The current work is focused on full-stack data implementation, responsive/mobile verification, testing, and preparation of the Lesson 6 demonstration.
+The current work is focused on full-stack data implementation, responsive/mobile verification, testing, and demonstration preparation.
 
 ## Safety and product principle
 
