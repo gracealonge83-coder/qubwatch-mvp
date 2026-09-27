@@ -17,35 +17,49 @@ function Dashboard({ business, user, users, products, transactions, alerts, open
 
   const openAlerts = alerts.filter((a) => a.status === 'New' || a.status === 'Under Review')
   const recent = [...transactions].slice(-6).reverse()
+  const hour = new Date().getHours()
+  const daypart = hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening'
+  const firstName = user.name.split(' ')[0]
 
   return (
     <div>
+      <div className="dash-top">
+        <div>
+          <h1>Good {daypart}, {firstName}</h1>
+          <div className="muted">{business.name} · {user.role} · Monitoring overview</div>
+        </div>
+        <div className="user-card">
+          <div>{user.role}</div>
+          <div><strong>{user.name}</strong></div>
+        </div>
+      </div>
+
       <div className="kpi-grid">
         <div className="card kpi">
-          <h3>Sales</h3>
-          <p className="kpi-value">₦{salesTotal.toLocaleString()}</p>
+          <div className="metric-label">Sales</div>
+          <div className="metric">₦{salesTotal.toLocaleString()}</div>
           <p className="muted">{sales.length} sales</p>
         </div>
         <div className="card kpi">
-          <h3>Refunds</h3>
-          <p className="kpi-value">₦{refundTotal.toLocaleString()}</p>
+          <div className="metric-label">Refunds</div>
+          <div className="metric">₦{refundTotal.toLocaleString()}</div>
           <p className="muted">{refunds.length} refunds</p>
         </div>
         <div className="card kpi">
-          <h3>Discounts</h3>
-          <p className="kpi-value">₦{discountTotal.toLocaleString()}</p>
+          <div className="metric-label">Discounts</div>
+          <div className="metric">₦{discountTotal.toLocaleString()}</div>
           <p className="muted">{discounts.length} discounted</p>
         </div>
         <div className="card kpi">
-          <h3>Open alerts</h3>
-          <p className="kpi-value">{openAlerts.length}</p>
+          <div className="metric-label">Open alerts</div>
+          <div className="metric">{openAlerts.length}</div>
           <p className="muted">need review</p>
         </div>
       </div>
 
-      <div className="grid" style={{ marginTop: '1rem' }}>
+      <div className="grid" style={{ marginTop: '18px' }}>
         <div className="card">
-          <h2>Business information</h2>
+          <div className="section-title">Business information</div>
           <p><strong>{business.name}</strong></p>
           <p>{business.type} — {business.location}</p>
           <p>Date: {today}</p>
@@ -58,19 +72,20 @@ function Dashboard({ business, user, users, products, transactions, alerts, open
         </div>
 
         <div className="card">
-          <h2>Needs attention</h2>
+          <div className="section-title">Needs attention</div>
           {openAlerts.length === 0 ? (
             <p className="muted">No alerts need review right now.</p>
           ) : (
-            <ul>
+            <div>
               {openAlerts.slice(0, 3).map((a) => (
-                <li key={a.id}>
+                <div key={a.id} className="dash-alert">
+                  <strong>{a.type}</strong>
+                  <span className="muted">{a.message}</span>
                   <span className={`badge badge-${a.severity.toLowerCase()}`}>{a.severity}</span>
-                  {' '}{a.type}{' '}
-                  <button className="secondary-btn" onClick={() => onReviewAlert(a.id)}>Review</button>
-                </li>
+                  <span><button className="secondary-btn" onClick={() => onReviewAlert(a.id)}>Review</button></span>
+                </div>
               ))}
-            </ul>
+            </div>
           )}
           <button className="secondary-btn" onClick={() => onNavigate('Alerts')}>Open alerts</button>
           <p className="muted">Open investigations: {openInvestigationCount}</p>
@@ -78,24 +93,35 @@ function Dashboard({ business, user, users, products, transactions, alerts, open
         </div>
       </div>
 
-      <div className="grid" style={{ marginTop: '1rem' }}>
+      <div className="grid" style={{ marginTop: '18px' }}>
         <div className="card">
-          <h2>Recent activity</h2>
+          <div className="section-title">Recent activity</div>
           {recent.length === 0 ? (
             <p className="muted">No recent activity yet.</p>
           ) : (
-          <ul>
-            {recent.map((t) => (
-              <li key={t.id}>
-                {formatDateTime(t.date)} — {t.type} — {productById[t.productId] ? productById[t.productId].name : t.productId} — ₦{t.amount.toLocaleString()} ({userById[t.staffId] ? userById[t.staffId].name : t.staffId})
-              </li>
-            ))}
-          </ul>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Date</th><th>Product</th><th>Type</th><th>Amount</th><th>User</th></tr>
+              </thead>
+              <tbody>
+                {recent.map((t) => (
+                  <tr key={t.id}>
+                    <td>{formatDateTime(t.date)}</td>
+                    <td>{productById[t.productId] ? productById[t.productId].name : t.productId}</td>
+                    <td>{t.type}</td>
+                    <td>₦{t.amount.toLocaleString()}</td>
+                    <td>{userById[t.staffId] ? userById[t.staffId].name : t.staffId}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           )}
         </div>
 
         <div className="card">
-          <h2>Inventory</h2>
+          <div className="section-title">Inventory</div>
           <p className="muted">{inventoryIssues} product(s) differ from expected stock.</p>
           <button className="secondary-btn" onClick={() => onNavigate('Products')}>View products</button>
         </div>

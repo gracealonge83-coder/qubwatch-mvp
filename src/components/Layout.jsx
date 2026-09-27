@@ -14,13 +14,27 @@ const NAV_ITEMS = [
 
 function Layout({ currentPage, onNavigate, businessName, notificationCount, onOpenNotifications, user, onLogout, children }) {
   return (
-    <div className="app">
-      <header className="header">
+    <div className="app shell">
+      <aside className="sidebar">
         <div>
           <h1 className="brand">QubWatch</h1>
           <p className="tagline">Giving you smarter eyes.</p>
         </div>
-        <div className="header-side">
+
+        <nav className="side-nav" aria-label="Main navigation">
+          {NAV_ITEMS.map((item) => (
+            <button
+              key={item}
+              className={item === currentPage ? 'side-nav-btn active' : 'side-nav-btn'}
+              onClick={() => onNavigate(item)}
+            >
+              {item}
+            </button>
+          ))}
+        </nav>
+
+        <div className="side-controls">
+          <p className="business-pill">{businessName}</p>
           <button
             className={currentPage === 'Notifications' ? 'bell-btn active' : 'bell-btn'}
             onClick={onOpenNotifications}
@@ -28,32 +42,21 @@ function Layout({ currentPage, onNavigate, businessName, notificationCount, onOp
           >
             Notifications{notificationCount > 0 ? ` (${notificationCount})` : ''}
           </button>
-          <p className="business-pill">{businessName}</p>
           {user && (
             <button className="bell-btn" onClick={onLogout} aria-label="Logout">
               Logout ({user.name})
             </button>
           )}
         </div>
-      </header>
+      </aside>
 
-      <nav className="nav">
-        {NAV_ITEMS.map((item) => (
-          <button
-            key={item}
-            className={item === currentPage ? 'nav-btn active' : 'nav-btn'}
-            onClick={() => onNavigate(item)}
-          >
-            {item}
-          </button>
-        ))}
-      </nav>
+      <div className="shell-main">
+        <main className="main">{children}</main>
 
-      <main className="main">{children}</main>
-
-      <footer className="footer">
-        <p>QubWatch — Giving you smarter eyes.</p>
-      </footer>
+        <footer className="footer">
+          <p>QubWatch — Giving you smarter eyes.</p>
+        </footer>
+      </div>
 
       <MobileNav
         currentPage={currentPage}
