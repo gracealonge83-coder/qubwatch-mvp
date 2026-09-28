@@ -24,7 +24,17 @@ const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)))
 const API_PORT = 3001
 const APP_PORT = 5173
 const STARTUP_TIMEOUT_MS = 45000
-const NPM = process.platform === 'win32' ? 'npm.cmd' : 'npm'
+
+// npm CLI entry point, so the frontend can be started as `npm run dev`
+// through plain Node without a shell (avoids DEP0190 and .cmd shims).
+function resolveNpmCli() {
+  if (process.env.npm_execpath && fs.existsSync(process.env.npm_execpath)) {
+    return process.env.npm_execpath
+  }
+  const fallback = path.join(path.dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npm-cli.js')
+  if (fs.existsSync(fallback)) return fallback
+  throw new Error('could not locate the npm CLI script')
+}
 
 function log(tag, message) {
   process.stdout.write(`[prototype:${tag}] ${message}\n`)
@@ -78,13 +88,12 @@ process.on('SIGTERM', () => {
   setTimeout(() => process.exit(0), 1500).unref()
 })
 
-function startChild(tag, command, args, env, useShell) {
+function startChild(tag, command, args, env) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, {
       cwd: ROOT,
       env: { ...process.env, ...env },
       stdio: ['ignore', 'pipe', 'pipe'],
-      shell: useShell,
     })
     children.add(child)
     child.stdout.on('data', (d) => log(tag, String(d).trimEnd()))
@@ -117,7 +126,7 @@ try {
   await startChild('api', process.execPath, ['server/index.js'], {
     PORT: String(API_PORT),
     QUBWATCH_DEMO_LOGIN: '1',
-  }, false)
+  })
   await waitForHealth(`http://127.0.0.1:${API_PORT}/api/health`, STARTUP_TIMEOUT_MS)
   log('launcher', 'backend ready')
 
@@ -126,10 +135,10 @@ try {
     fs.existsSync(path.join(ROOT, 'localhost-key.pem'))
   const scheme = hasLocalCert ? 'https' : 'http'
   log('launcher', `starting frontend (demo auto-login enabled locally)`)
-  // npm is a batch shim (npm.cmd) on Windows and requires a shell to spawn.
-  await startChild('app', NPM, ['run', 'dev', '--', '--open', '--port', String(APP_PORT), '--strictPort'], {
+  // The npm CLI is executed as a plain Node script: no shell, no .cmd shim.
+  await startChild('app', process.execPath, [resolveNpmCli(), 'run', 'dev', '--', '--open', '--port', String(APP_PORT), '--strictPort'], {
     VITE_QUBWATCH_DEMO: '1',
-  }, process.platform === 'win32')
+  })
   log('launcher', `opening ${scheme}://localhost:${APP_PORT}/ — Dashboard first, no Login page`)
 } catch (err) {
   log('launcher', `ERROR: ${err.message}`)
