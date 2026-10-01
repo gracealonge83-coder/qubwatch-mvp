@@ -1073,7 +1073,7 @@ The frontend communicates with backend routes under `/api`. The backend validate
 
 - **Frontend:** React 19, JavaScript/JSX, Vite
 - **Backend:** Node.js and Express
-- **Database:** SQLite using `better-sqlite3`
+- **Database:** PostgreSQL using `pg`
 - **PWA:** `vite-plugin-pwa`
 - **Styling:** CSS
 - **Authentication:** server-side sessions, HttpOnly cookies, scrypt password hashing

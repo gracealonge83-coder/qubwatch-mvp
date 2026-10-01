@@ -10,7 +10,7 @@ The prototype currently includes:
 
 - Responsive React interface built with Vite and JavaScript
 - Express backend API
-- SQLite database using `better-sqlite3`
+- PostgreSQL database using `pg`
 - Persistent business, user, product, transaction, alert, investigation, and audit data
 - Login sessions using HttpOnly cookies
 - Four roles: Business Owner, Authorized Manager, Staff User, Administrator
@@ -27,7 +27,7 @@ The initial MVP deliberately uses rule-based monitoring rather than advanced mac
 
 - **Frontend:** React 19 + JavaScript + Vite
 - **Backend:** Node.js + Express
-- **Database:** SQLite + better-sqlite3
+- **Database:** PostgreSQL + `pg`
 - **PWA:** vite-plugin-pwa
 - **Styling:** CSS
 - **Authentication:** server-side sessions with HttpOnly cookies and scrypt password hashing
