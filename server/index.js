@@ -1,5 +1,5 @@
 import express from 'express'
-import { migrate, getDb } from './db.js'
+import { migrate } from './db.js'
 import { attachUser } from './auth.js'
 import authRoutes from './routes/auth.js'
 import businessRoutes from './routes/business.js'
@@ -23,7 +23,7 @@ try {
 
 const app = express()
 app.use(express.json())
-app.use(attachUser(getDb()))
+app.use(attachUser())
 
 app.get('/api/health', (req, res) => {
   res.json({ ok: true, service: 'qubwatch-api' })

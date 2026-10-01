@@ -1,9 +1,10 @@
 import crypto from 'node:crypto'
 import { newId } from './ids.js'
+import { getDb, query, PG_MODE } from './db.js'
 
 // Stage 4 authentication + session foundation (PRD full-stack scope).
 // Passwords: scrypt hashes only (format "scrypt$N$r$p$saltHex$keyHex").
-// Sessions: random tokens in an HttpOnly cookie; only SHA-256 hashes in SQLite.
+// Sessions: random tokens in an HttpOnly cookie; only SHA-256 hashes in the database.
 // No JWT, no localStorage tokens, no MFA/SSO/recovery.
 
 export const SESSION_COOKIE = 'qubwatch_session'
@@ -136,10 +137,32 @@ export function parseCookies(req) {
   return out
 }
 
-export function attachUser(db) {
-  return (req, res, next) => {
+export function getSessionUserPg(token) {
+  if (!token) return null
+  return query(
+    `SELECT sessions.expires_at AS expires_at, users.* FROM sessions
+     JOIN users ON users.id = sessions.user_id
+     WHERE sessions.token_hash = $1`,
+    [hashToken(token)],
+  ).then(({ rows }) => {
+    const row = rows[0]
+    if (!row) return null
+    if (row.expires_at <= new Date()) {
+      return query('DELETE FROM sessions WHERE token_hash = $1', [hashToken(token)]).then(() => null)
+    }
+    return safeUser(row)
+  })
+}
+
+export function attachUser() {
+  return async (req, res, next) => {
     const cookies = parseCookies(req)
-    req.user = getSessionUser(db, cookies[SESSION_COOKIE]) || null
+    const token = cookies[SESSION_COOKIE]
+    if (PG_MODE) {
+      req.user = (await getSessionUserPg(token)) || null
+    } else {
+      req.user = getSessionUser(getDb(), token) || null
+    }
     next()
   }
 }
