@@ -1,6 +1,6 @@
 import crypto from 'node:crypto'
 import { newId } from './ids.js'
-import { getDb, query, PG_MODE } from './db.js'
+import { getDb, query, withTransaction, PG_MODE } from './db.js'
 
 // Stage 4 authentication + session foundation (PRD full-stack scope).
 // Passwords: scrypt hashes only (format "scrypt$N$r$p$saltHex$keyHex").
@@ -68,15 +68,34 @@ export function safeUser(row) {
   }
 }
 
-export function findUserByIdentifier(db, identifier) {
+export async function findUserByIdentifier(db, identifier) {
+  if (PG_MODE) {
+    const byId = await query('SELECT * FROM users WHERE id = $1', [identifier])
+    if (byId.rows[0]) return byId.rows[0]
+    const byName = await query('SELECT * FROM users WHERE name = $1', [identifier])
+    return byName.rows[0] || null
+  }
   const byId = db.prepare('SELECT * FROM users WHERE id = ?').get(identifier)
   if (byId) return byId
   return db.prepare('SELECT * FROM users WHERE name = ?').get(identifier) || null
 }
 
-export function createSession(db, userId) {
-  purgeExpired(db)
+export async function createSession(db, userId) {
   const token = crypto.randomBytes(32).toString('hex')
+  if (PG_MODE) {
+    const expiresAt = new Date(Date.now() + SESSION_TTL_HOURS * 60 * 60 * 1000)
+    await withTransaction(async (t) => {
+      await t.query('DELETE FROM sessions WHERE expires_at <= now()')
+      await t.query('INSERT INTO sessions (id, user_id, token_hash, expires_at) VALUES ($1, $2, $3, $4)', [
+        newId('sess'),
+        userId,
+        hashToken(token),
+        expiresAt,
+      ])
+    })
+    return token
+  }
+  purgeExpired(db)
   db.prepare(
     'INSERT INTO sessions (id, user_id, token_hash, expires_at) VALUES (?, ?, ?, ?)',
   ).run(newId('sess'), userId, hashToken(token), expiryStamp())
@@ -100,12 +119,20 @@ export function getSessionUser(db, token) {
   return safeUser(row)
 }
 
-export function destroySession(db, token) {
+export async function destroySession(db, token) {
   if (!token) return
+  if (PG_MODE) {
+    await query('DELETE FROM sessions WHERE token_hash = $1', [hashToken(token)])
+    return
+  }
   db.prepare('DELETE FROM sessions WHERE token_hash = ?').run(hashToken(token))
 }
 
-export function purgeExpired(db) {
+export async function purgeExpired(db) {
+  if (PG_MODE) {
+    await query('DELETE FROM sessions WHERE expires_at <= now()')
+    return
+  }
   db.prepare('DELETE FROM sessions WHERE expires_at <= ?').run(nowStamp())
 }
 
