@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import {
-  buildAlertResponse, briefInvestigation, overviewBrief, FAIRNESS_NOTE,
-} from '../ai/mockAssistant.js'
+import { FAIRNESS_NOTE } from '../ai/mockAssistant.js'
+import { api } from '../api/client.js'
 
-// Stage 5 AI Assistant (PRD Sections 28-29). Controlled mock responses only.
-// Read-only: this page never records findings or resolves anything.
+// AI Assistant (PRD Sections 28-29). Responses come from the backend
+// (/api/ai), which reads authorized QubWatch records and calls the
+// configured AI service. Read-only: this page never records findings
+// or resolves anything.
 const ALERT_QUESTIONS = [
   { id: 'summarize', label: 'Summarize this alert' },
   { id: 'why', label: 'Why was this alert generated?' },
@@ -18,39 +19,43 @@ function AiAssistant({
 }) {
   const [contextType, setContextType] = useState(initialContext.type)
   const [contextId, setContextId] = useState(initialContext.id)
-  const [request, setRequest] = useState(null)
+  const [response, setResponse] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
 
-  const productById = Object.fromEntries(products.map((p) => [p.id, p]))
-  const txnById = Object.fromEntries(transactions.map((t) => [t.id, t]))
-  const userById = Object.fromEntries(users.map((u) => [u.id, u]))
-  const ctx = { productById, txnById, userById, thresholds }
   const alertById = Object.fromEntries(alerts.map((a) => [a.id, a]))
   const invById = Object.fromEntries(investigations.map((i) => [i.id, i]))
 
-  function ask(question) {
+  async function ask(question) {
+    if (busy) return
     if (contextType === 'alert' && !alertById[contextId]) return
     if (contextType === 'investigation' && !invById[contextId]) return
-    setRequest({ contextType, contextId, question })
+    setError('')
+    setBusy(true)
+    try {
+      const res = await api.post('/ai', { contextType, contextId, question })
+      if (!res.ok) {
+        setError(res.error)
+        setResponse(null)
+        return
+      }
+      setResponse(res.data)
+    } finally {
+      setBusy(false)
+    }
   }
 
-  let response = null
-  if (request) {
-    if (request.contextType === 'alert' && alertById[request.contextId]) {
-      response = {
-        kind: 'alert',
-        id: request.contextId,
-        ...buildAlertResponse(alertById[request.contextId], request.question, ctx),
-      }
-    } else if (request.contextType === 'investigation' && invById[request.contextId]) {
-      const inv = invById[request.contextId]
-      response = {
-        kind: 'investigation',
-        id: request.contextId,
-        ...briefInvestigation(inv, alertById[inv.alertId] || null, ctx),
-      }
-    } else if (request.contextType === 'overview') {
-      response = { kind: 'overview', id: null, ...overviewBrief(business, products, transactions, alerts, investigations) }
-    }
+  function changeContext(type) {
+    setContextType(type)
+    setContextId(null)
+    setResponse(null)
+    setError('')
+  }
+
+  function changeSelection(id) {
+    setContextId(id || null)
+    setResponse(null)
+    setError('')
   }
 
   const questions = contextType === 'investigation'
@@ -70,7 +75,7 @@ function AiAssistant({
             Context
             <select
               value={contextType}
-              onChange={(e) => { setContextType(e.target.value); setContextId(null); setRequest(null) }}
+              onChange={(e) => changeContext(e.target.value)}
             >
               <option value="overview">Business overview</option>
               <option value="alert">Alert</option>
@@ -82,7 +87,7 @@ function AiAssistant({
               Alert
               <select
                 value={contextId || ''}
-                onChange={(e) => { setContextId(e.target.value || null); setRequest(null) }}
+                onChange={(e) => changeSelection(e.target.value)}
               >
                 <option value="">Select an alert</option>
                 {alerts.map((a) => (
@@ -96,7 +101,7 @@ function AiAssistant({
               Investigation
               <select
                 value={contextId || ''}
-                onChange={(e) => { setContextId(e.target.value || null); setRequest(null) }}
+                onChange={(e) => changeSelection(e.target.value)}
               >
                 <option value="">Select an investigation</option>
                 {investigations.map((i) => (
@@ -106,14 +111,14 @@ function AiAssistant({
             </label>
           )}
           {contextType === 'overview' && (
-            <button type="button" className="primary-btn" onClick={() => ask('summarize')}>
-              Summarize business activity
+            <button type="button" className="primary-btn" disabled={busy} onClick={() => ask('summarize')}>
+              {busy ? 'Thinking…' : 'Summarize business activity'}
             </button>
           )}
           {(contextType !== 'overview' && contextId) && (
             <div className="form-row">
               {questions.map((q) => (
-                <button key={q.id} type="button" className="secondary-btn" onClick={() => ask(q.id)}>
+                <button key={q.id} type="button" className="secondary-btn" disabled={busy} onClick={() => ask(q.id)}>
                   {q.label}
                 </button>
               ))}
@@ -125,6 +130,8 @@ function AiAssistant({
       <div className="card">
         <h2>Response</h2>
         <p className="ai-disclaimer">This assistant explains records; it does not decide, judge staff or prove wrongdoing.</p>
+        {busy && <p role="status">Thinking…</p>}
+        {error && <p>{error}</p>}
         {!response ? (
           <p className="muted">Choose a context and a question to receive a response.</p>
         ) : (

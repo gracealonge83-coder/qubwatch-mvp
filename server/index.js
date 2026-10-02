@@ -1,3 +1,4 @@
+import 'dotenv/config'
 import express from 'express'
 import { migrate } from './db.js'
 import { attachUser } from './auth.js'
@@ -10,6 +11,7 @@ import alertRoutes from './routes/alerts.js'
 import investigationRoutes from './routes/investigations.js'
 import auditRoutes from './routes/audit.js'
 import ruleRoutes from './routes/rules.js'
+import aiRoutes from './routes/ai.js'
 
 // QubWatch API (Stage 5): Express + SQLite with session authentication
 // and resource routes. Frontend migration arrives in a later stage.
@@ -38,6 +40,7 @@ app.use('/api', alertRoutes)
 app.use('/api', investigationRoutes)
 app.use('/api', auditRoutes)
 app.use('/api', ruleRoutes)
+app.use('/api', aiRoutes)
 
 const port = Number(process.env.PORT) || 3001
 app.listen(port, () => {
