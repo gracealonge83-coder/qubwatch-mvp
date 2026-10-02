@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { getDb } from '../db.js'
+import { getDb, query, PG_MODE } from '../db.js'
 import { requireAuth, requireRole } from '../auth.js'
 import { requiredText, badRequest } from '../validate.js'
 
@@ -21,8 +21,10 @@ function mapBusiness(row) {
 const router = Router()
 router.use(requireAuth)
 
-router.get('/business', (req, res) => {
-  const row = getDb().prepare('SELECT * FROM businesses LIMIT 1').get()
+router.get('/business', async (req, res) => {
+  const row = PG_MODE
+    ? (await query('SELECT * FROM businesses LIMIT 1')).rows[0]
+    : getDb().prepare('SELECT * FROM businesses LIMIT 1').get()
   if (!row) {
     res.status(404).json({ error: 'Business not found' })
     return
@@ -30,7 +32,7 @@ router.get('/business', (req, res) => {
   res.json(mapBusiness(row))
 })
 
-router.patch('/business', requireRole(...MANAGERS), (req, res) => {
+router.patch('/business', requireRole(...MANAGERS), async (req, res) => {
   const body = req.body || {}
   const allowed = ['name', 'type', 'location', 'owner', 'contact', 'hours']
   const updates = {}
@@ -50,13 +52,23 @@ router.patch('/business', requireRole(...MANAGERS), (req, res) => {
     badRequest(res, { _body: 'No business fields provided.' })
     return
   }
-  const db = getDb()
-  const current = db.prepare('SELECT * FROM businesses LIMIT 1').get()
+  const db = PG_MODE ? null : getDb()
+  const current = PG_MODE
+    ? (await query('SELECT * FROM businesses LIMIT 1')).rows[0]
+    : db.prepare('SELECT * FROM businesses LIMIT 1').get()
   if (!current) {
     res.status(404).json({ error: 'Business not found' })
     return
   }
   const merged = { ...mapBusiness(current), ...updates }
+  if (PG_MODE) {
+    const { rows } = await query(
+      'UPDATE businesses SET name = $1, type = $2, location = $3, owner = $4, contact = $5, hours = $6 WHERE id = $7 RETURNING *',
+      [merged.name, merged.type, merged.location, merged.owner, merged.contact, merged.hours, current.id],
+    )
+    res.json(mapBusiness(rows[0]))
+    return
+  }
   db.prepare(
     'UPDATE businesses SET name = ?, type = ?, location = ?, owner = ?, contact = ?, hours = ? WHERE id = ?',
   ).run(merged.name, merged.type, merged.location, merged.owner, merged.contact, merged.hours, current.id)

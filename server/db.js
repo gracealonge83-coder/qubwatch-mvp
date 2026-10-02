@@ -42,6 +42,9 @@ export function getPool() {
     pool = new pg.Pool({
       connectionString: process.env.DATABASE_URL,
       max: 10,
+      // Pin session timezone so zoneless literals and now() behave
+      // identically on every machine (API wire dates are UTC wall-clock).
+      options: '-c TimeZone=UTC',
       ssl: process.env.PGSSL === '1' ? { rejectUnauthorized: false } : false,
     })
     pool.on('error', (err) => {

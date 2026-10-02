@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { getDb } from '../db.js'
+import { getDb, query, PG_MODE } from '../db.js'
 import { requireAuth, requireRole } from '../auth.js'
 import { requiredText, positiveNumber, nonNegativeInt, badRequest, collect } from '../validate.js'
 import { newId } from '../ids.js'
@@ -12,21 +12,23 @@ function mapProduct(row) {
     id: row.id,
     name: row.name,
     category: row.category,
-    price: row.price,
-    stock: row.stock,
-    expectedStock: row.expected_stock,
+    price: Number(row.price),
+    stock: Number(row.stock),
+    expectedStock: Number(row.expected_stock),
   }
 }
 
 const router = Router()
 router.use(requireAuth)
 
-router.get('/products', (req, res) => {
-  const rows = getDb().prepare('SELECT * FROM products ORDER BY rowid').all()
+router.get('/products', async (req, res) => {
+  const rows = PG_MODE
+    ? (await query('SELECT * FROM products ORDER BY created_at, id')).rows
+    : getDb().prepare('SELECT * FROM products ORDER BY rowid').all()
   res.json(rows.map(mapProduct))
 })
 
-router.post('/products', requireRole(...MANAGERS), (req, res) => {
+router.post('/products', requireRole(...MANAGERS), async (req, res) => {
   const body = req.body || {}
   const errors = collect({
     name: requiredText(body.name),
@@ -38,10 +40,18 @@ router.post('/products', requireRole(...MANAGERS), (req, res) => {
     badRequest(res, errors)
     return
   }
-  const db = getDb()
+  const db = PG_MODE ? null : getDb()
   const id = newId('prod')
   // New products start with expected stock equal to recorded stock,
   // exactly like the current frontend behavior.
+  if (PG_MODE) {
+    const { rows } = await query(
+      'INSERT INTO products (id, name, category, price, stock, expected_stock) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+      [id, body.name.trim(), body.category.trim(), body.price, body.stock, body.stock],
+    )
+    res.status(201).json(mapProduct(rows[0]))
+    return
+  }
   db.prepare(
     'INSERT INTO products (id, name, category, price, stock, expected_stock) VALUES (?, ?, ?, ?, ?, ?)',
   ).run(id, body.name.trim(), body.category.trim(), body.price, body.stock, body.stock)
@@ -49,7 +59,7 @@ router.post('/products', requireRole(...MANAGERS), (req, res) => {
   res.status(201).json(mapProduct(created))
 })
 
-router.patch('/products/:id', requireRole(...MANAGERS), (req, res) => {
+router.patch('/products/:id', requireRole(...MANAGERS), async (req, res) => {
   const body = req.body || {}
   const updates = {}
   for (const key of ['name', 'category', 'price', 'stock']) {
@@ -69,8 +79,10 @@ router.patch('/products/:id', requireRole(...MANAGERS), (req, res) => {
     badRequest(res, { _body: 'Provide fields to update.' })
     return
   }
-  const db = getDb()
-  const current = db.prepare('SELECT * FROM products WHERE id = ?').get(req.params.id)
+  const db = PG_MODE ? null : getDb()
+  const current = PG_MODE
+    ? (await query('SELECT * FROM products WHERE id = $1', [req.params.id])).rows[0]
+    : db.prepare('SELECT * FROM products WHERE id = ?').get(req.params.id)
   if (!current) {
     res.status(404).json({ error: 'Product not found' })
     return
@@ -80,6 +92,14 @@ router.patch('/products/:id', requireRole(...MANAGERS), (req, res) => {
   if (merged.category) merged.category = merged.category.trim()
   // expectedStock intentionally untouched: editing stock can create an
   // inventory discrepancy, exactly like the current frontend behavior.
+  if (PG_MODE) {
+    const { rows } = await query(
+      'UPDATE products SET name = $1, category = $2, price = $3, stock = $4 WHERE id = $5 RETURNING *',
+      [merged.name, merged.category, merged.price, merged.stock, current.id],
+    )
+    res.json(mapProduct(rows[0]))
+    return
+  }
   db.prepare('UPDATE products SET name = ?, category = ?, price = ?, stock = ? WHERE id = ?').run(
     merged.name,
     merged.category,
