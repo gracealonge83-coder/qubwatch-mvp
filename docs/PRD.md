@@ -1065,9 +1065,9 @@ This section records the implementation state used for the working local prototy
 
 QubWatch is implemented as a small full-stack application:
 
-**React/Vite frontend → Express API → SQLite database**
+**React/Vite frontend → Express API → PostgreSQL database (SQLite fallback)**
 
-The frontend communicates with backend routes under `/api`. The backend validates writes, applies authentication and role checks, and persists application data in SQLite.
+The frontend communicates with backend routes under `/api`. The backend validates writes, applies authentication and role checks, and persists application data in PostgreSQL (SQLite file fallback when DATABASE_URL is unset).
 
 ## 44.2 Technology Stack
 
@@ -1088,7 +1088,7 @@ The implementation uses the four product roles already defined in Section 33:
 3. Staff User
 4. Administrator
 
-The main persisted entities are Business, User, Product, Transaction, Alert, Investigation, Audit, and session data. SQLite migrations create and evolve the database schema.
+The main persisted entities are Business, User, Product, Transaction, Alert, Investigation, Audit, and session data. SQL migrations create and evolve the database schema.
 
 Demonstration accounts and business records use non-production test data. Real passwords, access tokens, and database files are not part of the public repository.
 
@@ -1098,7 +1098,7 @@ Demonstration accounts and business records use non-production test data. Real p
 - `src/api/client.js` — shared frontend API client and HTTP error handling
 - `server/index.js` — Express API entry point
 - `server/auth.js` — session authentication and server-side role authorization
-- `server/db.js` — SQLite connection and migration runner
+- `server/db.js` — dual-database connection and migration runner
 - `server/routes/` — backend business/API routes
 - `server/migrations/` — database schema migrations
 - `vite.config.js` — Vite development proxy and PWA configuration
@@ -1107,7 +1107,7 @@ Demonstration accounts and business records use non-production test data. Real p
 
 ## 44.5 Implementation Decisions
 
-- SQLite is the current database and system of record for backend-connected data.
+- PostgreSQL is the current database and system of record for backend-connected data, with SQLite retained as a local fallback.
 - The MVP uses deterministic, rule-based monitoring rather than advanced machine-learning anomaly detection.
 - Authentication uses server-side sessions stored in the database; session tokens are delivered through HttpOnly cookies rather than localStorage.
 - Role permissions are enforced on the server for protected operations.
@@ -1159,7 +1159,7 @@ The current roadmap is:
 
 **Current Phase Reached:** Initial Working Prototype / Full-Stack MVP Implementation
 
-**Current Status:** QubWatch has reached a working local prototype phase. The actual React/Vite application opens locally in the browser as a working QubWatch interface, separate from the static `design.html` preview. The prototype includes the QubWatch Dashboard and core application pages, uses the local Express API and SQLite database, and uses seeded/mock data for the local demonstration.
+**Current Status:** QubWatch has reached a working local prototype phase. The actual React/Vite application opens locally in the browser as a working QubWatch interface, separate from the static `design.html` preview. The prototype includes the QubWatch Dashboard and core application pages, uses the local Express API and PostgreSQL database, and uses seeded/mock data for the local demonstration.
 
 **What Comes Next:** Continue the QubWatch MVP implementation roadmap through further testing, refinement, validation, and preparation for the next development/release stage. Future work should remain aligned with the PRD scope.
 

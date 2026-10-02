@@ -44,7 +44,7 @@ src/
 server/
   index.js                Express API server
   auth.js                 Authentication and authorization
-  db.js                   SQLite connection and migrations
+  db.js                   Dual-database connection (PostgreSQL primary, SQLite fallback) and migrations
   routes/                 Backend API routes
   migrations/             Database schema migrations
 
