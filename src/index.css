@@ -364,6 +364,15 @@ th { color: var(--muted); font-weight: 600; }
   padding-top: 0.5rem;
 }
 
+.billing-success { color: #027a48; }
+.billing-error { color: #b42318; }
+.billing-pending {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
 .primary-btn {
   background: var(--primary);
   color: #fff;

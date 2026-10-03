@@ -227,6 +227,10 @@ The following are outside the first MVP:
 
 These features may be considered in later versions.
 
+Assessment exception: a Paystack Test Mode subscription/payment demonstration may be included solely to demonstrate a payment-gateway integration required for the assessment. It is not QubWatch's operational payment-processing functionality, does not process supermarket/customer payments, uses Test Mode only with no real-money transactions, and full payment integrations remain outside the normal MVP scope.
+
+The demonstration is available only to the Business Owner in Settings. It offers a server-validated QubWatch monthly plan of ₦5,000 (50,000 kobo); plan and amount are defined by the server. The Paystack secret key must be configured as `PAYSTACK_SECRET_KEY` in the API server's private `.env` file using a Test Mode secret key (`sk_test_...`). Production deployments must set `APP_URL` to the exact HTTPS application origin for the Paystack return URL. Successful subscription status is recorded only after the server verifies the transaction with Paystack.
+
 ---
 
 # 11. Main Navigation

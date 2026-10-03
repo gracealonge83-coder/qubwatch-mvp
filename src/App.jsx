@@ -22,7 +22,11 @@ const DEMO_AUTOLOGIN = import.meta.env.VITE_QUBWATCH_DEMO === '1'
 // Pages keep the same props and UI; only the data layer changed.
 // No ML, no AI, no autonomous decisions.
 function App() {
-  const [page, setPage] = useState('Dashboard')
+  const [page, setPage] = useState(() => (
+    new URLSearchParams(window.location.search).get('billing') === 'callback'
+      ? 'Settings'
+      : 'Dashboard'
+  ))
   const [session, setSession] = useState({ status: 'loading', user: null })
   const [biz, setBiz] = useState(null)
   const [productList, setProductList] = useState([])
@@ -330,6 +334,7 @@ function App() {
         onRestoreRules={restoreDefaultRules}
         newCredentials={newUserCredentials}
         onClearCredentials={() => setNewUserCredentials(null)}
+        currentUser={currentUser}
       />
     )
   } else if (page === 'Products') {

@@ -16,7 +16,9 @@ export const PG_MODE = !!process.env.DATABASE_URL
 const SQLITE_PATH = process.env.DB_PATH || path.join(process.cwd(), 'data', 'qubwatch.sqlite')
 const MIGRATIONS_DIR = path.join(process.cwd(), 'server', 'migrations')
 // SQLite 001-003 predate PostgreSQL support and contain SQLite-only dialect.
+// Migration 006 uses a portable subset and applies in both modes.
 const LEGACY_SQLITE_MIGRATION = /^(001|002|003)-/
+const SHARED_MIGRATION = /^006-/
 
 let sqliteDb = null
 let pool = null
@@ -102,7 +104,9 @@ function migrationFiles() {
     .readdirSync(MIGRATIONS_DIR)
     .filter((f) => f.endsWith('.sql'))
     .sort()
-    .filter((f) => (PG_MODE ? !LEGACY_SQLITE_MIGRATION.test(f) : LEGACY_SQLITE_MIGRATION.test(f)))
+    .filter((f) => (PG_MODE
+      ? !LEGACY_SQLITE_MIGRATION.test(f)
+      : LEGACY_SQLITE_MIGRATION.test(f) || SHARED_MIGRATION.test(f)))
 }
 
 function migrateSqlite() {

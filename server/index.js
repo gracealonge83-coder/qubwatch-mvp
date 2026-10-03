@@ -12,6 +12,7 @@ import investigationRoutes from './routes/investigations.js'
 import auditRoutes from './routes/audit.js'
 import ruleRoutes from './routes/rules.js'
 import aiRoutes from './routes/ai.js'
+import billingRoutes from './routes/billing.js'
 
 // QubWatch API (Stage 5): Express + SQLite with session authentication
 // and resource routes. Frontend migration arrives in a later stage.
@@ -41,6 +42,7 @@ app.use('/api', investigationRoutes)
 app.use('/api', auditRoutes)
 app.use('/api', ruleRoutes)
 app.use('/api', aiRoutes)
+app.use('/api', billingRoutes)
 
 const port = Number(process.env.PORT) || 3001
 app.listen(port, () => {
