@@ -10,14 +10,15 @@ The prototype currently includes:
 
 - Responsive React interface built with Vite and JavaScript
 - Express backend API
-- PostgreSQL database using `pg`
+- PostgreSQL database using `pg`, with SQLite fallback using `better-sqlite3`
 - Persistent business, user, product, transaction, alert, investigation, and audit data
 - Login sessions using HttpOnly cookies
 - Four roles: Business Owner, Authorized Manager, Staff User, Administrator
 - Server-enforced role permissions
 - Rule-based monitoring and alert generation
 - Investigation notes, findings, resolutions, and audit information
-- AI Assistant demonstration responses
+- AI Assistant powered by a server-side Groq API integration, with records-only responses and human-review safeguards
+- Paystack Test Mode subscription/payment demonstration for the assessment; owner-only, server-verified, and not used for supermarket/customer payments
 - Loading, empty, success and error UI states for backend-connected operations
 - Installable PWA support and responsive mobile web experience
 
@@ -27,10 +28,12 @@ The initial MVP deliberately uses rule-based monitoring rather than advanced mac
 
 - **Frontend:** React 19 + JavaScript + Vite
 - **Backend:** Node.js + Express
-- **Database:** PostgreSQL + `pg`
+- **Database:** PostgreSQL + `pg`, with SQLite + `better-sqlite3` fallback
 - **PWA:** vite-plugin-pwa
 - **Styling:** CSS
 - **Authentication:** server-side sessions with HttpOnly cookies and scrypt password hashing
+- **AI integration:** Groq API called by the server; the assistant uses supplied QubWatch records and supports human review
+- **Payment integration:** Paystack Test Mode demonstration for a QubWatch subscription only; it does not process supermarket/customer payments or provide production payment processing
 
 ## Project structure
 
