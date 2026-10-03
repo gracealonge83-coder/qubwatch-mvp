@@ -1,61 +1,139 @@
-# QubWatch Version 1
+# QubWatch
+
+## AI-Powered Business Monitoring and Investigation Platform
 
 **QubWatch — Giving you smarter eyes.**
 
-QubWatch is a business monitoring and investigation application for business owners and authorized managers of inventory-based, high-transaction businesses. It monitors business activities, identifies unusual patterns using defined rules and presents relevant information for human review.
+QubWatch is a business monitoring and investigation platform for business owners and authorized managers. It helps them identify unusual business activity, review operational patterns, and investigate transactions and events.
 
-## Current implementation
+It is designed especially for inventory-based, high-transaction businesses such as supermarkets, retail shops, and pharmacies, where owners and managers may not always be available to supervise daily operations.
 
-The prototype currently includes:
+QubWatch gives authorized business users greater visibility into recorded business activity and helps them focus on activity that may need review.
 
-- Responsive React interface built with Vite and JavaScript
-- Express backend API
-- PostgreSQL database using `pg`, with SQLite fallback using `better-sqlite3`
-- Persistent business, user, product, transaction, alert, investigation, and audit data
-- Login sessions using HttpOnly cookies
-- Four roles: Business Owner, Authorized Manager, Staff User, Administrator
-- Server-enforced role permissions
-- Rule-based monitoring and alert generation
-- Investigation notes, findings, resolutions, and audit information
-- AI Assistant powered by a server-side Groq API integration, with records-only responses and human-review safeguards
-- Paystack Test Mode subscription/payment demonstration for the assessment; owner-only, server-verified, and not used for supermarket/customer payments
-- Loading, empty, success and error UI states for backend-connected operations
-- Installable PWA support and responsive mobile web experience
+### Core principle
 
-The initial MVP deliberately uses rule-based monitoring rather than advanced machine-learning anomaly detection. QubWatch identifies unusual activity for review; it does not automatically conclude that wrongdoing has occurred.
+QubWatch identifies activities that **require attention**. It does not automatically accuse staff of theft, fraud, or wrongdoing.
+
+> **Signals for review. Not proof of wrongdoing.**
+
+Alerts are based on configured monitoring rules and available business records. An authorized business user reviews the information, investigates when necessary, and makes the final decision.
+
+## The problem
+
+Many business owners rely on employees and managers to handle sales, inventory, cash, products, and daily transactions. When the owner is away or unable to supervise operations, unusual activities or losses may be difficult to notice quickly.
+
+Examples include:
+
+- Unexpected or unusually large transactions
+- Unauthorized or unusually large discounts
+- Repeated refunds
+- Inventory discrepancies
+- Unusual transaction patterns or frequency
+- Unexpected changes in business records
+
+Traditional business records can show **what happened** without clearly highlighting **what deserves attention**. QubWatch evaluates recorded activity against configured monitoring rules and brings potentially unusual patterns to authorized users' attention.
+
+## The goal
+
+QubWatch helps authorized business users to:
+
+1. Monitor business activities and transactions.
+2. Identify unusual patterns that may require review.
+3. Receive alerts based on configured monitoring rules.
+4. Review related transactions and business records.
+5. Investigate alerts and document findings.
+6. Use AI to analyze available, authorized business information.
+7. Make better-informed decisions based on the available evidence.
+
+## Core product areas
+
+| Area | Description |
+| --- | --- |
+| Login | Secure authentication for authorized users. |
+| Business Setup | Configure the business profile and manage authorized users. |
+| Dashboard | Overview of business activity, transactions, products, alerts, and investigations. |
+| Products | Create and manage product records and inventory information. |
+| Transactions | Record and review business transactions and related details. |
+| Monitoring Rules | Configure thresholds used to identify activity that may require attention. |
+| Alerts | Flag activity such as large transactions, repeated refunds, excessive discounts, and unusual transaction frequency. |
+| Investigation | Review alerts and related records; document notes, findings, and resolutions. |
+| AI Assistant | Server-side Groq AI integration for questions about authorized QubWatch records. Responses support human review and do not replace it. |
+| Audit | Record important system and business actions for accountability and review. |
+
+## Monitoring and alerts
+
+The MVP uses rule-based monitoring for activities such as:
+
+- Large transactions
+- Repeated refunds
+- Excessive discounts
+- Unusual transaction frequency
+
+These rules generate alerts when recorded activity meets configured conditions. An alert is **not a conclusion of wrongdoing**; it gives an authorized user something specific to review.
+
+## Investigation
+
+When an alert needs further review, an authorized user can examine relevant business records and document:
+
+- Related transactions
+- Investigation notes
+- Findings
+- Resolution
+
+This creates a structured record of how an alert was reviewed and resolved.
+
+## AI Assistant
+
+The QubWatch AI Assistant provides a natural-language way to ask questions about available business information. Examples include:
+
+- “Why was this transaction flagged?”
+- “What unusual transactions should I review?”
+- “Show me the transactions related to this alert.”
+- “What patterns can be seen in these records?”
+
+The server-side Groq integration uses authorized QubWatch records supplied by the application. The assistant helps with investigation and analysis; it does not make accusations or final business decisions.
+
+> **AI assists the investigation; humans make the final decision.**
+
+## Paystack assessment demonstration
+
+QubWatch includes a **Paystack Test Mode** subscription/payment demonstration for the assessment. It is available to the Business Owner and verifies payment server-side. It demonstrates a QubWatch subscription only; it does **not** process supermarket or other customer payments and is **not production payment processing**. Test Mode is intended for demonstration, not real-money transactions.
+
+## User flow
+
+**Login → Business Setup → Dashboard → Products → Transactions → Monitoring → Alerts → Investigation → AI Assistant → Findings → Resolution**
+
+## Roles and access
+
+QubWatch uses role-based access control so users receive access according to their responsibilities. The MVP includes:
+
+- **Business Owner**
+- **Authorized Manager**
+- **Staff User**
+- **Administrator**
+
+The initial product focus is on business owners and authorized managers who need visibility into business activity while maintaining appropriate access controls and least-privilege permissions.
+
+## Target users
+
+QubWatch is initially designed for:
+
+- Owners of supermarkets and supermarts
+- Retail business owners
+- Pharmacy owners
+- Authorized business and operations managers
+- Other authorized users responsible for monitoring inventory-based, high-transaction businesses
 
 ## Technology
 
-- **Frontend:** React 19 + JavaScript + Vite
-- **Backend:** Node.js + Express
-- **Database:** PostgreSQL + `pg`, with SQLite + `better-sqlite3` fallback
-- **PWA:** vite-plugin-pwa
+- **Frontend:** React 19, JavaScript, and Vite
+- **Backend:** Node.js and Express
+- **Database:** PostgreSQL with `pg`, with SQLite via `better-sqlite3` as a fallback
+- **Authentication:** Server-side sessions with HttpOnly cookies and scrypt password hashing
+- **AI integration:** Groq API called by the server
+- **Payment demonstration:** Paystack Test Mode; owner-only and server-verified
+- **PWA:** `vite-plugin-pwa`
 - **Styling:** CSS
-- **Authentication:** server-side sessions with HttpOnly cookies and scrypt password hashing
-- **AI integration:** Groq API called by the server; the assistant uses supplied QubWatch records and supports human review
-- **Payment integration:** Paystack Test Mode demonstration for a QubWatch subscription only; it does not process supermarket/customer payments or provide production payment processing
-
-## Project structure
-
-```text
-src/
-  App.jsx                 Main application flow and screens
-  api/client.js           Frontend API client
-  components/             Reusable interface components
-  storage/                Client-side/offline support
-
-server/
-  index.js                Express API server
-  auth.js                 Authentication and authorization
-  db.js                   Dual-database connection (PostgreSQL primary, SQLite fallback) and migrations
-  routes/                 Backend API routes
-  migrations/             Database schema migrations
-
-docs/
-  PRD.md                  Product requirements and implementation notes
-
-design.html               Standalone prototype/design preview for design review
-```
 
 ## Run locally
 
@@ -65,16 +143,16 @@ Install dependencies:
 npm install
 ```
 
-Run the frontend:
-
-```sh
-npm run dev
-```
-
-Run the API server in a second terminal:
+Start the API server in one terminal:
 
 ```sh
 npm run dev:api
+```
+
+Start the frontend in a second terminal:
+
+```sh
+npm run dev
 ```
 
 Create a production frontend build:
@@ -83,62 +161,50 @@ Create a production frontend build:
 npm run build
 ```
 
-## Local demo mode (LOCAL ONLY — never production)
+## Local demo mode (local only — never production)
 
-For local demonstration runs, the actual QubWatch dashboard can open
-directly without typing a login, while keeping the full authentication
-system intact. Both flags below are required at the same time:
+For local demonstration runs, the app can open directly to the dashboard using the existing Business Owner demo session. Both local-only flags are required:
 
-1. Create a local-only frontend flag file named `.env.local` (already
-   ignored by `.gitignore`, never commit it) containing:
+1. Create a local `.env.local` file (ignored by Git) containing:
+
+   ```text
+   VITE_QUBWATCH_DEMO=1
+   ```
+
+2. Start the API server with the demo flag:
+
+   ```powershell
+   $env:QUBWATCH_DEMO_LOGIN = '1'; npm run dev:api
+   ```
+
+3. Start the frontend in another terminal:
+
+   ```sh
+   npm run dev
+   ```
+
+Then open `https://localhost:5173/`. Do not enable the demo login in production or commit local environment files or credentials.
+
+## Project structure
 
 ```text
-VITE_QUBWATCH_DEMO=1
+src/
+  App.jsx                 Main application flow and screens
+  api/client.js           Frontend API client
+  components/             Reusable interface components
+  pages/                  Application pages
+
+server/
+  index.js                Express API server
+  auth.js                 Authentication and authorization
+  db.js                   Database connection and migrations
+  routes/                 Backend API routes
+  migrations/             Database schema migrations
+
+docs/
+  PRD.md                  Product requirements and implementation notes
 ```
 
-2. Start the API server with the local-only backend flag:
+## Product philosophy
 
-```sh
-QUBWATCH_DEMO_LOGIN=1 npm run dev:api
-```
-
-(PowerShell: `$env:QUBWATCH_DEMO_LOGIN = '1'; npm run dev:api`)
-
-3. Start the frontend and open it:
-
-```sh
-npm run dev
-```
-
-Then opening `https://localhost:5173/` loads the dashboard directly as the
-seeded Business Owner through the existing HttpOnly session mechanism and
-the existing API. Login, logout, role permissions, and protected routes all
-behave normally; after a manual logout the Login page shows until the next
-reload. Without both flags, the application behaves exactly as production:
-unauthenticated visitors see the Login page and `POST /api/auth/demo`
-returns 404.
-
-Do not set `QUBWATCH_DEMO_LOGIN` in any production environment and do not
-commit `.env.local` or any credentials to the repository.
-
-## Prototype preview
-
-The repository contains a self-contained `design.html` preview so the prototype can be rendered directly by an HTML preview service without requiring the React development server or external assets.
-
-## Development stages
-
-1. Product Foundation
-2. Core Business Functions
-3. Monitoring
-4. Investigation
-5. AI Assistant
-6. Mobile Application
-7. Testing and Demonstration
-
-The current work is focused on full-stack data implementation, responsive/mobile verification, testing, and demonstration preparation.
-
-## Safety and product principle
-
-QubWatch identifies unusual business activity and presents relevant information to the authorized user for review. It supports human decision-making rather than making accusations or autonomous business decisions.
-
-Do not commit real passwords, API keys, session tokens, database files, or other secrets to the public repository.
+QubWatch highlights activity that may deserve attention, provides information for investigation, and keeps the final judgment with the authorized human user.
