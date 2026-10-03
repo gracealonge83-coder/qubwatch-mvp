@@ -123,7 +123,7 @@ function SubscriptionSettings() {
   }
 
   return (
-    <section className="card">
+    <section className="card subscription-card">
       <h2>QubWatch subscription</h2>
       <p className="muted">Paystack Test Mode demonstration only. This does not accept payments from supermarket customers.</p>
       {loading ? (

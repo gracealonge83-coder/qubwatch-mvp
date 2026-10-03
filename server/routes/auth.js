@@ -51,7 +51,7 @@ router.post('/logout', async (req, res) => {
 // behaves as if absent. Uses the existing session + HttpOnly cookie
 // mechanism; no credential is accepted or returned here.
 router.post('/demo', async (req, res) => {
-  if (process.env.QUBWATCH_DEMO_LOGIN !== '1') {
+  if (process.env.NODE_ENV === 'production' || process.env.QUBWATCH_DEMO_LOGIN !== '1') {
     res.status(404).json({ error: 'Not found' })
     return
   }

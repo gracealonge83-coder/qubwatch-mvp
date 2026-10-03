@@ -31,7 +31,7 @@ function Investigations({
   const selected = investigations.find((i) => i.id === selectedId) || null
 
   return (
-    <div className="grid">
+    <div className="grid investigations-page">
       <div className="card">
         <h2>Investigations ({visible.length})</h2>
         <p className="muted">Human review only. Start an investigation from an alert.</p>
@@ -203,7 +203,7 @@ function InvestigationDetail({
   }
 
   return (
-    <div>
+    <div className="investigation-detail">
       <p><strong>{investigation.id}</strong></p>
       {shownNotice && <p role="status">{shownNotice}</p>}
       <p>Related alert: {alert ? alert.type : investigation.alertType} ({alert ? alert.severity : investigation.alertSeverity})</p>
@@ -317,7 +317,7 @@ function InvestigationDetail({
             <button className="secondary-btn" onClick={handleClose} disabled={busyOp !== null}>{busyOp === 'close' ? 'Closing…' : 'Close investigation'}</button>
           )}
           {(investigation.status === 'Resolved' || investigation.status === 'Closed') && (
-            <button className="secondary-btn" onClick={handleDelete} disabled={busyOp !== null}>{busyOp === 'delete' ? 'Deleting…' : 'Delete investigation'}</button>
+            <button className="secondary-btn destructive-btn" onClick={handleDelete} disabled={busyOp !== null}>{busyOp === 'delete' ? 'Deleting…' : 'Delete investigation'}</button>
           )}
         </div>
       ) : (

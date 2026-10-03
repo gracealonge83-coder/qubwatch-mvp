@@ -7,6 +7,7 @@ import { addAudit } from '../auditLog.js'
 import { formatWireDate } from '../dates.js'
 
 const RECORDERS = ['Business Owner', 'Authorized Manager', 'Staff User']
+const REVIEWERS = ['Business Owner', 'Authorized Manager', 'Administrator']
 
 function mapTransaction(row) {
   if (!row) return null
@@ -26,9 +27,13 @@ const router = Router()
 router.use(requireAuth)
 
 router.get('/transactions', async (req, res) => {
-  const rows = PG_MODE
-    ? (await query('SELECT * FROM transactions ORDER BY created_at, id')).rows
-    : getDb().prepare('SELECT * FROM transactions ORDER BY rowid').all()
+  const rows = !REVIEWERS.includes(req.user.role)
+    ? (PG_MODE
+      ? (await query('SELECT * FROM transactions WHERE staff_id = $1 ORDER BY created_at, id', [req.user.id])).rows
+      : getDb().prepare('SELECT * FROM transactions WHERE staff_id = ? ORDER BY rowid').all(req.user.id))
+    : (PG_MODE
+      ? (await query('SELECT * FROM transactions ORDER BY created_at, id')).rows
+      : getDb().prepare('SELECT * FROM transactions ORDER BY rowid').all())
   res.json(rows.map(mapTransaction))
 })
 
@@ -56,11 +61,19 @@ router.post('/transactions', requireRole(...RECORDERS), async (req, res) => {
     return
   }
   const staffId = body.staffId || req.user.id
+  if (req.user.role === 'Staff User' && staffId !== req.user.id) {
+    res.status(403).json({ error: 'Staff users may only record transactions under their own account' })
+    return
+  }
   const staff = PG_MODE
-    ? (await query('SELECT id FROM users WHERE id = $1', [staffId])).rows[0]
-    : db.prepare('SELECT id FROM users WHERE id = ?').get(staffId)
+    ? (await query('SELECT id, business_id FROM users WHERE id = $1', [staffId])).rows[0]
+    : db.prepare('SELECT id, business_id FROM users WHERE id = ?').get(staffId)
   if (!staff) {
     badRequest(res, { staffId: 'Unknown staff user.' })
+    return
+  }
+  if (staff.business_id !== req.user.businessId) {
+    res.status(403).json({ error: 'Transactions may only be attributed to a user in your business' })
     return
   }
   // Amount is always recomputed server-side; client previews are not trusted.

@@ -49,7 +49,7 @@ QubWatch helps authorized business users to:
 
 | Area | Description |
 | --- | --- |
-| Login | Secure authentication for authorized users. |
+| Login | Authentication for authorized users. |
 | Business Setup | Configure the business profile and manage authorized users. |
 | Dashboard | Overview of business activity, transactions, products, alerts, and investigations. |
 | Products | Create and manage product records and inventory information. |
@@ -112,7 +112,7 @@ QubWatch uses role-based access control so users receive access according to the
 - **Staff User**
 - **Administrator**
 
-The initial product focus is on business owners and authorized managers who need visibility into business activity while maintaining appropriate access controls and least-privilege permissions.
+The initial product focus is on business owners and authorized managers who need visibility into business activity. Access is role-based for supported backend routes; permissions vary by role and feature.
 
 ## Target users
 
@@ -128,12 +128,49 @@ QubWatch is initially designed for:
 
 - **Frontend:** React 19, JavaScript, and Vite
 - **Backend:** Node.js and Express
-- **Database:** PostgreSQL with `pg`, with SQLite via `better-sqlite3` as a fallback
+- **Database:** SQLite via `better-sqlite3` by default when `DATABASE_URL` is not configured; PostgreSQL with `pg` when `DATABASE_URL` is configured
 - **Authentication:** Server-side sessions with HttpOnly cookies and scrypt password hashing
 - **AI integration:** Groq API called by the server
 - **Payment demonstration:** Paystack Test Mode; owner-only and server-verified
 - **PWA:** `vite-plugin-pwa`
 - **Styling:** CSS
+
+## Security and Data Protection
+
+### Authentication and sessions
+
+Passwords are stored as salted scrypt hashes rather than plaintext. Sessions use random tokens, while only hashed session tokens are stored server-side. Sessions expire after 12 hours. Session cookies use `HttpOnly` and `SameSite=Lax`; production sessions use the `Secure` cookie attribute. Passwordless demo login requires explicit local/demo configuration and is blocked when the server runs with `NODE_ENV=production`.
+
+### Authorization
+
+Important backend routes enforce authentication and role-based authorization. QubWatch has four application roles: **Business Owner**, **Authorized Manager**, **Staff User**, and **Administrator**. Permissions vary by route and feature; this is not a claim of a complete enterprise RBAC system.
+
+- **Business Owner:** Broadest business-management access.
+- **Authorized Manager:** Operational access; cannot promote users to privileged Business Owner or Administrator roles.
+- **Staff User:** Limited access and can record transactions for their own account.
+- **Administrator:** Administrative/read access where implemented.
+
+### AI and Your Data
+
+When the QubWatch AI Assistant is used, selected authorized QubWatch records may be sent to Groq to generate an AI-assisted response. Depending on the question and context, this may include business, transaction, product, staff-related transaction, alert, and investigation information.
+
+The AI Assistant supports investigation and analysis. Its output is not proof of wrongdoing and does not make the final business decision. AI processing is not entirely local, and QubWatch does not claim independent fact-checking of AI output. The AI integration has no tool or write path that directly modifies QubWatch records.
+
+### Secrets and API Credentials
+
+Groq and Paystack secret credentials are configured as server-side environment variables and are not intended to be exposed in frontend code. `.env` is excluded from Git. Never commit secret keys, passwords, session tokens, or private certificates.
+
+### Database Security
+
+SQLite is used as the local/default database when `DATABASE_URL` is not configured. PostgreSQL is used when `DATABASE_URL` is configured. When the server runs in production mode, PostgreSQL connections use TLS with certificate validation. A private CA certificate can be supplied on the server using `PGSSL_CA_FILE`. Local development may use SQLite or local PostgreSQL without production TLS requirements.
+
+### Production Security Considerations
+
+QubWatch is assessment/demo oriented and is not presented as a fully hardened multi-tenant SaaS platform. Its current data model is designed around a single-business/demo context and does not provide complete isolation for unrelated businesses sharing one database.
+
+The audit trail is not claimed to be complete, immutable, or tamper-evident. Some PostgreSQL audit writes are not transactionally coupled to the related business operation. This MVP does not establish encryption-at-rest, backup or disaster-recovery guarantees, penetration testing, or regulatory compliance.
+
+For a future public production deployment, configure secure environment-variable and secret management, HTTPS, validated PostgreSQL TLS, and appropriate operational controls. These production considerations do not change the intended Qubators assessment/demo scope.
 
 ## Run locally
 

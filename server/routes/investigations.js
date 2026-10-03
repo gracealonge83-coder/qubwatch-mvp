@@ -8,6 +8,7 @@ import { addAudit } from '../auditLog.js'
 import { formatWireDate } from '../dates.js'
 
 const MANAGERS = ['Business Owner', 'Authorized Manager']
+const REVIEWERS = [...MANAGERS, 'Administrator']
 const OPEN_STATES = ['Open', 'Under Investigation']
 
 function parseJsonArray(value) {
@@ -45,13 +46,17 @@ const router = Router()
 router.use(requireAuth)
 
 router.get('/investigations', async (req, res) => {
+  if (!REVIEWERS.includes(req.user.role)) {
+    res.json([])
+    return
+  }
   const rows = PG_MODE
     ? (await query('SELECT * FROM investigations ORDER BY created_at, id')).rows
     : getDb().prepare('SELECT * FROM investigations ORDER BY rowid').all()
   res.json(rows.map(mapInvestigation))
 })
 
-router.get('/investigations/:id', async (req, res) => {
+router.get('/investigations/:id', requireRole(...REVIEWERS), async (req, res) => {
   const row = PG_MODE
     ? (await query('SELECT * FROM investigations WHERE id = $1', [req.params.id])).rows[0]
     : getDb().prepare('SELECT * FROM investigations WHERE id = ?').get(req.params.id)

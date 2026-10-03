@@ -1069,15 +1069,15 @@ This section records the implementation state used for the working local prototy
 
 QubWatch is implemented as a small full-stack application:
 
-**React/Vite frontend → Express API → PostgreSQL database (SQLite fallback)**
+**React/Vite frontend → Express API → SQLite by default locally or PostgreSQL when configured**
 
-The frontend communicates with backend routes under `/api`. The backend validates writes, applies authentication and role checks, and persists application data in PostgreSQL (SQLite file fallback when DATABASE_URL is unset).
+The frontend communicates with backend routes under `/api`. The backend validates writes, applies authentication and role checks, and persists application data in SQLite when `DATABASE_URL` is unset or PostgreSQL when `DATABASE_URL` is configured.
 
 ## 44.2 Technology Stack
 
 - **Frontend:** React 19, JavaScript/JSX, Vite
 - **Backend:** Node.js and Express
-- **Database:** PostgreSQL using `pg`
+- **Database:** SQLite using `better-sqlite3` by default when `DATABASE_URL` is unset; PostgreSQL using `pg` when `DATABASE_URL` is configured
 - **PWA:** `vite-plugin-pwa`
 - **Styling:** CSS
 - **Authentication:** server-side sessions, HttpOnly cookies, scrypt password hashing
@@ -1111,7 +1111,7 @@ Demonstration accounts and business records use non-production test data. Real p
 
 ## 44.5 Implementation Decisions
 
-- PostgreSQL is the current database and system of record for backend-connected data, with SQLite retained as a local fallback.
+- SQLite is the default local database when `DATABASE_URL` is not configured. PostgreSQL is used when `DATABASE_URL` is configured and is the supported production database configuration; production PostgreSQL connections require TLS with certificate validation.
 - The MVP uses deterministic, rule-based monitoring rather than advanced machine-learning anomaly detection.
 - Authentication uses server-side sessions stored in the database; session tokens are delivered through HttpOnly cookies rather than localStorage.
 - Role permissions are enforced on the server for protected operations.
@@ -1163,7 +1163,7 @@ The current roadmap is:
 
 **Current Phase Reached:** Initial Working Prototype / Full-Stack MVP Implementation
 
-**Current Status:** QubWatch has reached a working local prototype phase. The actual React/Vite application opens locally in the browser as a working QubWatch interface, separate from the static `design.html` preview. The prototype includes the QubWatch Dashboard and core application pages, uses the local Express API and PostgreSQL database, and uses seeded/mock data for the local demonstration.
+**Current Status:** QubWatch has reached a working local prototype phase. The actual React/Vite application opens locally in the browser as a working QubWatch interface, separate from the static `design.html` preview. The prototype includes the QubWatch Dashboard and core application pages, uses the local Express API and SQLite by default (or PostgreSQL when `DATABASE_URL` is configured), and uses seeded/mock data for the local demonstration.
 
 **What Comes Next:** Continue the QubWatch MVP implementation roadmap through further testing, refinement, validation, and preparation for the next development/release stage. Future work should remain aligned with the PRD scope.
 

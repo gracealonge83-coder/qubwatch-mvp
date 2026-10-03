@@ -57,7 +57,7 @@ function Alerts({ alerts, products, transactions, users, selectedId, onSelect, o
   }
 
   return (
-    <div className="grid">
+    <div className="grid alerts-page">
       <div className="card">
         <h2>Alerts ({visible.length})</h2>
         <p className="muted">Signals for review. Not proof of wrongdoing.</p>

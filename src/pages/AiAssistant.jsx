@@ -66,8 +66,8 @@ function AiAssistant({
     : ALERT_QUESTIONS
 
   return (
-    <div className="grid">
-      <div className="card">
+    <div className="grid ai-assistant-page">
+      <div className="card ai-controls">
         <h2>AI Assistant</h2>
         <p className="muted">Explanations based on your business records. The assistant supports you; you decide.</p>
         <div className="form">
@@ -127,7 +127,7 @@ function AiAssistant({
         </div>
       </div>
 
-      <div className="card">
+      <div className="card ai-response">
         <h2>Response</h2>
         <p className="ai-disclaimer">This assistant explains records; it does not decide, judge staff or prove wrongdoing.</p>
         {busy && <p role="status">Thinking…</p>}

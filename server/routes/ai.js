@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { getDb, query, PG_MODE } from '../db.js'
-import { requireAuth } from '../auth.js'
+import { requireAuth, requireRole } from '../auth.js'
 import { badRequest } from '../validate.js'
 import { deriveAlerts } from './alerts.js'
 
@@ -17,6 +17,7 @@ const MAX_ITEMS = 8
 const MAX_ITEM_CHARS = 500
 
 const CONTEXTS = ['overview', 'alert', 'investigation']
+const AI_REVIEWERS = ['Business Owner', 'Authorized Manager', 'Administrator']
 
 const QUESTION_GUIDE = {
   summarize: 'Summarize the supplied records plainly.',
@@ -303,7 +304,7 @@ async function callGroq(systemPrompt, userPrompt) {
 const router = Router()
 router.use(requireAuth)
 
-router.post('/ai', async (req, res) => {
+router.post('/ai', requireRole(...AI_REVIEWERS), async (req, res) => {
   const body = req.body || {}
   const { contextType, contextId, question } = body
   if (!CONTEXTS.includes(contextType)) {

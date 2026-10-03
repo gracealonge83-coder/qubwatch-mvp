@@ -6,6 +6,7 @@ import { ROLES, requiredText, inList, badRequest, collect } from '../validate.js
 import { newId } from '../ids.js'
 
 const MANAGERS = ['Business Owner', 'Authorized Manager']
+const REVIEWERS = [...MANAGERS, 'Administrator']
 
 function mapUser(row) {
   if (!row) return null
@@ -26,6 +27,10 @@ const router = Router()
 router.use(requireAuth)
 
 router.get('/users', async (req, res) => {
+  if (!REVIEWERS.includes(req.user.role)) {
+    res.json([req.user])
+    return
+  }
   const rows = PG_MODE
     ? (await query('SELECT * FROM users ORDER BY created_at, id')).rows
     : getDb().prepare('SELECT * FROM users ORDER BY rowid').all()
@@ -40,6 +45,10 @@ router.post('/users', requireRole(...MANAGERS), async (req, res) => {
   })
   if (errors) {
     badRequest(res, errors)
+    return
+  }
+  if (req.user.role !== 'Business Owner' && body.role !== 'Staff User') {
+    res.status(403).json({ error: 'Only a Business Owner may assign privileged roles' })
     return
   }
   const db = PG_MODE ? null : getDb()
@@ -93,6 +102,19 @@ router.patch('/users/:id', requireRole(...MANAGERS), async (req, res) => {
   if (!current) {
     res.status(404).json({ error: 'User not found' })
     return
+  }
+  if (req.user.role !== 'Business Owner') {
+    const isNameOnlySelfUpdate = current.id === req.user.id
+      && updates.role === undefined
+      && current.role === 'Authorized Manager'
+    if (current.role !== 'Staff User' && !isNameOnlySelfUpdate) {
+      res.status(403).json({ error: 'Managers may only manage staff users' })
+      return
+    }
+    if (updates.role !== undefined && updates.role !== 'Staff User') {
+      res.status(403).json({ error: 'Only a Business Owner may assign privileged roles' })
+      return
+    }
   }
   const merged = { ...mapUser(current), ...updates }
   if (merged.name) merged.name = merged.name.trim()

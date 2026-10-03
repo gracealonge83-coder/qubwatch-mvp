@@ -71,6 +71,10 @@ const router = Router()
 router.use(requireAuth)
 
 router.get('/alerts', async (req, res) => {
+  if (req.user.role === 'Staff User') {
+    res.json([])
+    return
+  }
   res.json(await deriveAlerts(PG_MODE ? null : getDb()))
 })
 

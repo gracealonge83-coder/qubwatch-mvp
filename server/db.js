@@ -23,6 +23,43 @@ const SHARED_MIGRATION = /^006-/
 let sqliteDb = null
 let pool = null
 
+function postgresConnectionString() {
+  const connectionString = process.env.DATABASE_URL
+  if (process.env.NODE_ENV !== 'production') return connectionString
+
+  const url = new URL(connectionString)
+  const sslOptions = new Set([
+    'ssl',
+    'sslmode',
+    'sslcert',
+    'sslkey',
+    'sslpassword',
+    'sslrootcert',
+    'sslcrl',
+    'sslnegotiation',
+    'uselibpqcompat',
+  ])
+  for (const key of [...url.searchParams.keys()]) {
+    if (sslOptions.has(key.toLowerCase())) url.searchParams.delete(key)
+  }
+  return url.toString()
+}
+
+function postgresSslConfig() {
+  const production = process.env.NODE_ENV === 'production'
+  const enabled = production || process.env.PGSSL === '1'
+  if (!enabled) return false
+
+  const caFile = process.env.PGSSL_CA_FILE
+  const ca = caFile ? fs.readFileSync(caFile, 'utf8') : undefined
+  return {
+    // Preserve the existing opt-in local SSL behavior; production always
+    // validates the server against system roots or the configured CA file.
+    rejectUnauthorized: production,
+    ...(ca ? { ca } : {}),
+  }
+}
+
 export function getDb() {
   if (PG_MODE) {
     throw new Error('getDb() is SQLite-only; use query()/withTransaction() in PostgreSQL mode')
@@ -42,12 +79,12 @@ export function getPool() {
   }
   if (!pool) {
     pool = new pg.Pool({
-      connectionString: process.env.DATABASE_URL,
+      connectionString: postgresConnectionString(),
       max: 10,
       // Pin session timezone so zoneless literals and now() behave
       // identically on every machine (API wire dates are UTC wall-clock).
       options: '-c TimeZone=UTC',
-      ssl: process.env.PGSSL === '1' ? { rejectUnauthorized: false } : false,
+      ssl: postgresSslConfig(),
     })
     pool.on('error', (err) => {
       console.error('[db] pg pool error:', err.message)

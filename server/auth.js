@@ -137,7 +137,9 @@ export async function purgeExpired(db) {
 }
 
 function cookieAttributes(maxAge) {
-  const secure = process.env.COOKIE_SECURE === '1' ? '; Secure' : ''
+  const secure = process.env.NODE_ENV === 'production' || process.env.COOKIE_SECURE === '1'
+    ? '; Secure'
+    : ''
   return `Path=/; HttpOnly; SameSite=Lax${secure}; Max-Age=${maxAge}`
 }
 

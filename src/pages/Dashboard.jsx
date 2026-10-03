@@ -1,6 +1,7 @@
 // Dashboard with Stage 2 KPIs plus a Stage 3 attention card.
 // Attention card lists rule-based alerts for review. No auto-decisions.
 import { formatDateTime } from '../utils/formatDateTime.js'
+import Icon from '../components/Icon.jsx'
 
 function Dashboard({ business, user, users, products, transactions, alerts, openInvestigationCount, onNavigate, onReviewAlert }) {
   const today = formatDateTime(new Date())
@@ -35,23 +36,23 @@ function Dashboard({ business, user, users, products, transactions, alerts, open
       </div>
 
       <div className="kpi-grid">
-        <div className="card kpi">
-          <div className="metric-label">Sales</div>
+        <div className="card kpi kpi-sales">
+          <div className="kpi-heading"><span className="kpi-icon"><Icon name="sales" /></span><div className="metric-label">Sales</div></div>
           <div className="metric">₦{salesTotal.toLocaleString()}</div>
           <p className="muted">{sales.length} sales</p>
         </div>
-        <div className="card kpi">
-          <div className="metric-label">Refunds</div>
+        <div className="card kpi kpi-refunds">
+          <div className="kpi-heading"><span className="kpi-icon"><Icon name="refund" /></span><div className="metric-label">Refunds</div></div>
           <div className="metric">₦{refundTotal.toLocaleString()}</div>
           <p className="muted">{refunds.length} refunds</p>
         </div>
-        <div className="card kpi">
-          <div className="metric-label">Discounts</div>
+        <div className="card kpi kpi-discounts">
+          <div className="kpi-heading"><span className="kpi-icon"><Icon name="discount" /></span><div className="metric-label">Discounts</div></div>
           <div className="metric">₦{discountTotal.toLocaleString()}</div>
           <p className="muted">{discounts.length} discounted</p>
         </div>
-        <div className="card kpi">
-          <div className="metric-label">Open alerts</div>
+        <div className="card kpi kpi-alerts">
+          <div className="kpi-heading"><span className="kpi-icon"><Icon name="alertMetric" /></span><div className="metric-label">Open alerts</div></div>
           <div className="metric">{openAlerts.length}</div>
           <p className="muted">need review</p>
         </div>
