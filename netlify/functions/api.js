@@ -1,4 +1,9 @@
-module.exports.handler = async (event, context) => {
-  const { handler } = await import('./api.mjs')
-  return handler(event, context)
+import serverless from 'serverless-http'
+import { app, initialize } from '../../server/index.js'
+
+const handle = serverless(app)
+
+export async function handler(event, context) {
+  await initialize()
+  return handle(event, context)
 }

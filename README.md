@@ -166,7 +166,7 @@ SQLite is used locally when `DATABASE_URL` is not configured. Local PostgreSQL u
 
 ### Netlify assessment deployment
 
-The Netlify build publishes `dist` and deploys the existing Express API through the CommonJS Netlify entry point `netlify/functions/api.js`, which dynamically imports the ESM handler in `netlify/functions/api.mjs`. The Function imports the same Express app and routes used by `npm run dev:api`; local Vite development continues to proxy `/api` to `localhost:3001`. Netlify provides `NETLIFY_DB_URL` for the managed PostgreSQL database, so no database connection string belongs in frontend configuration or source control.
+The Netlify build publishes `dist` and bundles the existing Express API from the ESM Netlify Function entry point `netlify/functions/api.js`. The Function imports the same Express app and routes used by `npm run dev:api`; local Vite development continues to proxy `/api` to `localhost:3001`. Netlify provides `NETLIFY_DB_URL` for the managed PostgreSQL database, so no database connection string belongs in frontend configuration or source control.
 
 ### Production Security Considerations
 

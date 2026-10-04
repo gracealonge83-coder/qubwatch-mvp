@@ -6,7 +6,7 @@
 [functions]
   node_bundler = "esbuild"
   external_node_modules = ["express", "better-sqlite3"]
-  included_files = ["netlify/functions/api.mjs", "server/**/*.js", "server/migrations/*.sql"]
+  included_files = ["server/**/*.js", "server/migrations/*.sql"]
 
 [[redirects]]
   from = "/api/*"
