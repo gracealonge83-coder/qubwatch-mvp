@@ -1,9 +1,23 @@
-import serverless from 'serverless-http'
-import { app, initialize } from '../../server/index.js'
+const serverless = require('serverless-http')
 
-const handle = serverless(app)
+let handlerPromise
 
-export async function handler(event, context) {
-  await initialize()
-  return handle(event, context)
+async function getHandler() {
+  if (!handlerPromise) {
+    handlerPromise = import('../../server/index.js')
+      .then(async ({ app, initialize }) => {
+        await initialize()
+        return serverless(app)
+      })
+      .catch((error) => {
+        handlerPromise = null
+        throw error
+      })
+  }
+  return handlerPromise
+}
+
+module.exports.handler = async (event, context) => {
+  const handler = await getHandler()
+  return handler(event, context)
 }
