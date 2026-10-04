@@ -501,6 +501,8 @@ An investigation may contain:
 * Status
 * Resolution date
 
+Investigators may be Business Owners, Authorized Managers, or Administrators. Staff Users cannot be assigned as investigators.
+
 ---
 
 # 23. Investigation Status

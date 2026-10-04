@@ -1,5 +1,7 @@
 import 'dotenv/config'
 import express from 'express'
+import path from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { migrate } from './db.js'
 import { attachUser } from './auth.js'
 import authRoutes from './routes/auth.js'
@@ -14,17 +16,8 @@ import ruleRoutes from './routes/rules.js'
 import aiRoutes from './routes/ai.js'
 import billingRoutes from './routes/billing.js'
 
-// QubWatch API (Stage 5): Express + SQLite with session authentication
-// and resource routes. Frontend migration arrives in a later stage.
-// No frontend changes here.
-try {
-  await migrate()
-} catch (err) {
-  console.error('[api] migration failed:', err.message)
-  process.exit(1)
-}
-
-const app = express()
+// Shared Express application for the local server and Netlify Function.
+export const app = express()
 app.use(express.json())
 app.use(attachUser())
 
@@ -44,7 +37,27 @@ app.use('/api', ruleRoutes)
 app.use('/api', aiRoutes)
 app.use('/api', billingRoutes)
 
-const port = Number(process.env.PORT) || 3001
-app.listen(port, () => {
-  console.log(`qubwatch-api listening on ${port}`)
-})
+let initialization
+export function initialize() {
+  if (!initialization) {
+    initialization = migrate().catch((err) => {
+      initialization = null
+      throw err
+    })
+  }
+  return initialization
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+  try {
+    await initialize()
+  } catch (err) {
+    console.error('[api] migration failed:', err.message)
+    process.exit(1)
+  }
+
+  const port = Number(process.env.PORT) || 3001
+  app.listen(port, () => {
+    console.log(`qubwatch-api listening on ${port}`)
+  })
+}

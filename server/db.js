@@ -5,13 +5,20 @@ import pg from 'pg'
 
 // Dual-driver database layer (PG foundation stage).
 //
-// - SQLite mode (default, no DATABASE_URL): legacy better-sqlite3 file DB at
-//   DB_PATH or data/qubwatch.sqlite. Existing routes keep using getDb().
-// - PostgreSQL mode (DATABASE_URL set): pg.Pool. SQLite migrations 001-003
-//   are skipped; PostgreSQL migrations 004+ are applied. Routes use query()
-//   and withTransaction() once converted (later stage); getDb() refuses in
-//   PG mode so a half-migrated route fails loudly instead of silently.
-export const PG_MODE = !!process.env.DATABASE_URL
+// - SQLite mode (default locally): legacy better-sqlite3 file DB at DB_PATH
+//   or data/qubwatch.sqlite. Existing routes keep using getDb().
+// - PostgreSQL mode: DATABASE_URL locally, or NETLIFY_DB_URL on Netlify.
+//   SQLite migrations 001-003 are skipped; PostgreSQL migrations 004+ run.
+const IS_NETLIFY = process.env.NETLIFY === 'true'
+const DATABASE_URL = IS_NETLIFY
+  ? process.env.NETLIFY_DB_URL || process.env.DATABASE_URL
+  : process.env.DATABASE_URL
+
+if (IS_NETLIFY && !DATABASE_URL) {
+  throw new Error('Netlify requires NETLIFY_DB_URL or DATABASE_URL; refusing to use ephemeral SQLite storage')
+}
+
+export const PG_MODE = Boolean(DATABASE_URL)
 
 const SQLITE_PATH = process.env.DB_PATH || path.join(process.cwd(), 'data', 'qubwatch.sqlite')
 const MIGRATIONS_DIR = path.join(process.cwd(), 'server', 'migrations')
@@ -19,12 +26,13 @@ const MIGRATIONS_DIR = path.join(process.cwd(), 'server', 'migrations')
 // Migration 006 uses a portable subset and applies in both modes.
 const LEGACY_SQLITE_MIGRATION = /^(001|002|003)-/
 const SHARED_MIGRATION = /^006-/
+const MIGRATION_LOCK_ID = '718462993401'
 
 let sqliteDb = null
 let pool = null
 
 function postgresConnectionString() {
-  const connectionString = process.env.DATABASE_URL
+  const connectionString = DATABASE_URL
   if (process.env.NODE_ENV !== 'production') return connectionString
 
   const url = new URL(connectionString)
@@ -207,7 +215,25 @@ async function migratePostgres() {
   return fresh
 }
 
+async function migratePostgresWithLock() {
+  const client = await getPool().connect()
+  let locked = false
+  try {
+    await client.query('SELECT pg_advisory_lock($1::bigint)', [MIGRATION_LOCK_ID])
+    locked = true
+    return await migratePostgres()
+  } finally {
+    try {
+      if (locked) {
+        await client.query('SELECT pg_advisory_unlock($1::bigint)', [MIGRATION_LOCK_ID])
+      }
+    } finally {
+      client.release()
+    }
+  }
+}
+
 export async function migrate() {
-  if (PG_MODE) return migratePostgres()
+  if (PG_MODE) return migratePostgresWithLock()
   return migrateSqlite()
 }

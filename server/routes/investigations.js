@@ -9,6 +9,7 @@ import { formatWireDate } from '../dates.js'
 
 const MANAGERS = ['Business Owner', 'Authorized Manager']
 const REVIEWERS = [...MANAGERS, 'Administrator']
+const INVESTIGATOR_ROLES = ['Business Owner', 'Authorized Manager', 'Administrator']
 const OPEN_STATES = ['Open', 'Under Investigation']
 
 function parseJsonArray(value) {
@@ -218,10 +219,14 @@ router.patch('/investigations/:id', requireRole(...MANAGERS), async (req, res) =
     return
   }
   const investigator = PG_MODE
-    ? (await query('SELECT id FROM users WHERE id = $1', [body.investigatorId])).rows[0]
-    : db.prepare('SELECT id FROM users WHERE id = ?').get(body.investigatorId)
+    ? (await query('SELECT id, role FROM users WHERE id = $1', [body.investigatorId])).rows[0]
+    : db.prepare('SELECT id, role FROM users WHERE id = ?').get(body.investigatorId)
   if (!investigator) {
     res.status(404).json({ error: 'User not found' })
+    return
+  }
+  if (!INVESTIGATOR_ROLES.includes(investigator.role)) {
+    badRequest(res, { investigatorId: 'Investigator must be a Business Owner, Authorized Manager, or Administrator.' })
     return
   }
   if (PG_MODE) {

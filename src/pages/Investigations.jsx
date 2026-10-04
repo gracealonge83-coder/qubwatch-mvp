@@ -4,6 +4,7 @@ import { formatDateTime } from '../utils/formatDateTime.js'
 // Stage 4 investigations (PRD Sections 22-27 + 32). Human review only.
 // No AI, no automation: the user records every note, finding, and resolution.
 const STATUSES = ['all', 'Open', 'Under Investigation', 'Resolved', 'Closed']
+const INVESTIGATOR_ROLES = ['Business Owner', 'Authorized Manager', 'Administrator']
 
 // Exact PRD Section 26 finding options.
 const FINDINGS = [
@@ -220,7 +221,7 @@ function InvestigationDetail({
           onChange={handleAssign}
           disabled={!isOpen || busyOp !== null}
         >
-          {users.map((u) => (
+          {users.filter((u) => INVESTIGATOR_ROLES.includes(u.role)).map((u) => (
             <option key={u.id} value={u.id}>{u.name} — {u.role}</option>
           ))}
         </select>

@@ -5,7 +5,7 @@ import MonitoringRules from '../components/MonitoringRules.jsx'
 import { api } from '../api/client.js'
 
 function SubscriptionSettings() {
-  const [email, setEmail] = useState('owner@qubwatch.demo')
+  const [email, setEmail] = useState('')
   const [payment, setPayment] = useState({ active: false, plan: null, reference: null, status: 'none' })
   const [loading, setLoading] = useState(true)
   const [initializing, setInitializing] = useState(false)
@@ -148,7 +148,7 @@ function SubscriptionSettings() {
           {notice && <p role="status" className="billing-success">{notice}</p>}
           {!payment.active && (
             <form className="form" onSubmit={startPayment}>
-              <p><strong>Monthly plan — ₦5,000</strong> (50,000 kobo)</p>
+              <p><strong>Monthly plan — ₦5,000</strong></p>
               <label>
                 Paystack Test Mode email
                 <input

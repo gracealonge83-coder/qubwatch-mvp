@@ -128,7 +128,7 @@ QubWatch is initially designed for:
 
 - **Frontend:** React 19, JavaScript, and Vite
 - **Backend:** Node.js and Express
-- **Database:** SQLite via `better-sqlite3` by default when `DATABASE_URL` is not configured; PostgreSQL with `pg` when `DATABASE_URL` is configured
+- **Database:** SQLite via `better-sqlite3` for local development by default; PostgreSQL with `pg` via local `DATABASE_URL` or Netlify's managed `NETLIFY_DB_URL`
 - **Authentication:** Server-side sessions with HttpOnly cookies and scrypt password hashing
 - **AI integration:** Groq API called by the server
 - **Payment demonstration:** Paystack Test Mode; owner-only and server-verified
@@ -162,7 +162,11 @@ Groq and Paystack secret credentials are configured as server-side environment v
 
 ### Database Security
 
-SQLite is used as the local/default database when `DATABASE_URL` is not configured. PostgreSQL is used when `DATABASE_URL` is configured. When the server runs in production mode, PostgreSQL connections use TLS with certificate validation. A private CA certificate can be supplied on the server using `PGSSL_CA_FILE`. Local development may use SQLite or local PostgreSQL without production TLS requirements.
+SQLite is used locally when `DATABASE_URL` is not configured. Local PostgreSQL uses `DATABASE_URL`. On Netlify, the API prefers the managed database connection in `NETLIFY_DB_URL` and uses `DATABASE_URL` only if the managed variable is unavailable; it refuses to fall back to SQLite there. The connection string is read only by the server-side database layer. PostgreSQL migrations 004, 005, and 006 create the schema and preserve the assessment demo seed records. PostgreSQL migration startup is serialized with an advisory lock.
+
+### Netlify assessment deployment
+
+The Netlify build publishes `dist`, deploys the existing Express API through `netlify/functions/api.js`, and rewrites `/api/*` requests to that function while retaining the React single-page-app fallback. The Function imports the same Express app and routes used by `npm run dev:api`; local Vite development continues to proxy `/api` to `localhost:3001`. Netlify provides `NETLIFY_DB_URL` for the managed PostgreSQL database, so no database connection string belongs in frontend configuration or source control.
 
 ### Production Security Considerations
 
