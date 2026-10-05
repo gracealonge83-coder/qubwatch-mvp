@@ -292,15 +292,6 @@ function App() {
     return true
   }
 
-  async function deleteInvestigation(invId) {
-    const res = await api.del(`/investigations/${invId}`)
-    if (!res.ok) return apiFailed(res)
-    setInvestigations((prev) => prev.filter((i) => i.id !== invId))
-    await refreshAudit()
-    if (selectedInvestigationId === invId) setSelectedInvestigationId(null)
-    return true
-  }
-
   const openInvestigationCount = investigations.filter(
     (i) => i.status === 'Open' || i.status === 'Under Investigation',
   ).length
@@ -381,7 +372,6 @@ function App() {
         onRecordFinding={recordFinding}
         onResolve={resolveInvestigation}
         onClose={closeInvestigation}
-        onDelete={deleteInvestigation}
         onOpenAlert={openAlert}
         onAskAiAboutInvestigation={askAiAboutInvestigation}
         auditLog={auditLog}

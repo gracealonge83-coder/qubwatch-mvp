@@ -515,8 +515,7 @@ The MVP should support:
 * Closed
 
 The lifecycle remains Open → Under Investigation → Resolved → Closed, with Closed as the completed, retained investigation state.
-A completed investigation (Resolved or Closed) may be deleted by an authorized user after confirmation. Active investigations (Open or Under Investigation) cannot be deleted.
-Deleting an investigation removes its notes, finding, resolution data, and investigation-scoped audit records. It does not change or erase the linked alert's review and status history.
+Resolved and Closed investigations are retained. Their investigation history — notes, findings, resolution data, related records, and investigation-scoped audit records — is preserved. Completed investigations cannot be deleted through the application. The linked alert's review and status history is likewise retained.
 No Archived status is used.
 
 ---
@@ -569,6 +568,8 @@ Possible findings include:
 * Other
 
 The user selects the finding based on the information reviewed.
+
+`Further Review Required` is a non-final finding. An investigation with this finding cannot be resolved; additional review and evidence are required before a final finding and resolution can be recorded.
 
 ---
 

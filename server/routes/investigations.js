@@ -218,6 +218,10 @@ router.patch('/investigations/:id', requireRole(...MANAGERS), async (req, res) =
     res.status(404).json({ error: 'Investigation not found' })
     return
   }
+  if (!OPEN_STATES.includes(row.status)) {
+    res.status(409).json({ error: 'Investigator can only be reassigned on open investigations.' })
+    return
+  }
   const investigator = PG_MODE
     ? (await query('SELECT id, role FROM users WHERE id = $1', [body.investigatorId])).rows[0]
     : db.prepare('SELECT id, role FROM users WHERE id = ?').get(body.investigatorId)
@@ -311,6 +315,10 @@ router.post('/investigations/:id/resolve', requireRole(...MANAGERS), async (req,
     res.status(409).json({ error: 'Resolution needs a recorded finding on an open investigation.' })
     return
   }
+  if (inv.finding === 'Further Review Required') {
+    res.status(409).json({ error: 'Investigations requiring further review cannot be resolved.' })
+    return
+  }
   const date = nowStamp()
   if (PG_MODE) {
     const { rows } = await withTransaction(async (t) => {
@@ -380,33 +388,14 @@ router.post('/investigations/:id/close', requireRole(...MANAGERS), async (req, r
 })
 
 router.delete('/investigations/:id', requireRole(...MANAGERS), async (req, res) => {
-  const db = PG_MODE ? null : getDb()
   const row = PG_MODE
     ? (await query('SELECT * FROM investigations WHERE id = $1', [req.params.id])).rows[0]
-    : db.prepare('SELECT * FROM investigations WHERE id = ?').get(req.params.id)
+    : getDb().prepare('SELECT * FROM investigations WHERE id = ?').get(req.params.id)
   if (!row) {
     res.status(404).json({ error: 'Investigation not found' })
     return
   }
-  const inv = mapInvestigation(row)
-  if (inv.status !== 'Resolved' && inv.status !== 'Closed') {
-    res.status(409).json({ error: 'Only resolved or closed investigations can be deleted.' })
-    return
-  }
-  if (PG_MODE) {
-    await withTransaction(async (t) => {
-      await t.query('DELETE FROM audit WHERE investigation_id = $1', [inv.id])
-      await t.query('DELETE FROM investigations WHERE id = $1', [inv.id])
-    })
-    res.json({ ok: true, id: inv.id })
-    return
-  }
-  const remove = db.transaction(() => {
-    db.prepare('DELETE FROM audit WHERE investigation_id = ?').run(inv.id)
-    db.prepare('DELETE FROM investigations WHERE id = ?').run(inv.id)
-  })
-  remove()
-  res.json({ ok: true, id: inv.id })
+  res.status(410).json({ error: 'Completed investigations are retained and cannot be deleted.' })
 })
 
 export default router

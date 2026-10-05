@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { getDb, query, withTransaction, PG_MODE } from '../db.js'
 import { requireAuth, requireRole } from '../auth.js'
-import { TXN_TYPES, discountPct, badRequest, collect, nowStamp } from '../validate.js'
+import { TXN_TYPES, discountPct, positiveInt, badRequest, collect, nowStamp } from '../validate.js'
 import { newId } from '../ids.js'
 import { addAudit } from '../auditLog.js'
 import { formatWireDate } from '../dates.js'
@@ -39,13 +39,10 @@ router.get('/transactions', async (req, res) => {
 
 router.post('/transactions', requireRole(...RECORDERS), async (req, res) => {
   const body = req.body || {}
-  const quantityOk = typeof body.quantity === 'number' && Number.isFinite(body.quantity) && body.quantity > 0
-    ? null
-    : 'Must be a number above 0.'
   const errors = collect({
     productId: typeof body.productId === 'string' && body.productId !== '' ? null : 'Product is required.',
     type: TXN_TYPES.includes(body.type) ? null : 'Invalid transaction type.',
-    quantity: quantityOk,
+    quantity: positiveInt(body.quantity),
     discount: discountPct(body.discount),
   })
   if (errors) {

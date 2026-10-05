@@ -20,7 +20,7 @@ const FINDINGS = [
 function Investigations({
   investigations, alerts, products, transactions, users, currentUser,
   selectedId, onSelect, onAddNote, onAssignInvestigator, onRecordFinding,
-  onResolve, onClose, onDelete, onOpenAlert, onAskAiAboutInvestigation, auditLog,
+  onResolve, onClose, onOpenAlert, onAskAiAboutInvestigation, auditLog,
 }) {
   const [statusFilter, setStatusFilter] = useState('all')
 
@@ -83,7 +83,6 @@ function Investigations({
             onRecordFinding={onRecordFinding}
             onResolve={onResolve}
             onClose={onClose}
-            onDelete={onDelete}
             onOpenAlert={onOpenAlert}
             onAskAiAboutInvestigation={onAskAiAboutInvestigation}
           />
@@ -96,7 +95,7 @@ function Investigations({
 function InvestigationDetail({
   investigation, alert, products, transactions, users, currentUser,
   auditLog, onAddNote, onAssignInvestigator, onRecordFinding,
-  onResolve, onClose, onDelete, onOpenAlert, onAskAiAboutInvestigation,
+  onResolve, onClose, onOpenAlert, onAskAiAboutInvestigation,
 }) {
   const [noteContent, setNoteContent] = useState('')
   const [findingChoice, setFindingChoice] = useState(investigation.finding || '')
@@ -116,7 +115,8 @@ function InvestigationDetail({
   const evidenceProducts = investigation.relatedProductIds.map((id) => productById[id]).filter(Boolean)
 
   const findingValid = findingChoice && (findingChoice !== 'Other' || findingOther.trim())
-  const canResolve = isOpen && findingValid && resolutionNotes.trim()
+  const needsFurtherReview = investigation.finding === 'Further Review Required'
+  const canResolve = isOpen && findingValid && resolutionNotes.trim() && !needsFurtherReview
   const shownNotice = notice && notice.id === investigation.id ? notice.text : null
 
   async function submitNote(event) {
@@ -187,20 +187,6 @@ function InvestigationDetail({
       setBusyOp(null)
     }
     if (ok) setNotice({ id: investigation.id, text: 'Investigator updated.' })
-  }
-
-  async function handleDelete() {
-    const confirmed = window.confirm(
-      'Delete this completed investigation? This removes its details, notes, finding, resolution and activity records. This cannot be undone.',
-    )
-    if (!confirmed || busyOp) return
-    setNotice(null)
-    setBusyOp('delete')
-    try {
-      await onDelete(investigation.id)
-    } finally {
-      setBusyOp(null)
-    }
   }
 
   return (
@@ -317,9 +303,6 @@ function InvestigationDetail({
           {investigation.status === 'Resolved' && (
             <button className="secondary-btn" onClick={handleClose} disabled={busyOp !== null}>{busyOp === 'close' ? 'Closing…' : 'Close investigation'}</button>
           )}
-          {(investigation.status === 'Resolved' || investigation.status === 'Closed') && (
-            <button className="secondary-btn destructive-btn" onClick={handleDelete} disabled={busyOp !== null}>{busyOp === 'delete' ? 'Deleting…' : 'Delete investigation'}</button>
-          )}
         </div>
       ) : (
         <div className="form">
@@ -330,6 +313,9 @@ function InvestigationDetail({
           <button type="button" className="primary-btn" onClick={submitResolve} disabled={!canResolve || busyOp !== null}>
             {busyOp === 'resolve' ? 'Resolving…' : 'Resolve investigation'}
           </button>
+          {needsFurtherReview && isOpen && (
+            <p className="muted">Further review is required before this investigation can be resolved.</p>
+          )}
           <p className="muted">Resolving needs a recorded finding plus resolution notes. The linked alert is set to Resolved.</p>
         </div>
       )}
