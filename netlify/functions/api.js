@@ -1,4 +1,4 @@
-const serverless = require('serverless-http')
+import serverless from 'serverless-http'
 
 let handlerPromise
 
@@ -17,7 +17,7 @@ async function getHandler() {
   return handlerPromise
 }
 
-module.exports.handler = async (event, context) => {
+export const handler = async (event, context) => {
   const handler = await getHandler()
   return handler(event, context)
 }
