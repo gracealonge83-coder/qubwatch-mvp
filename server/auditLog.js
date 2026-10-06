@@ -6,7 +6,7 @@ import { query, PG_MODE } from './db.js'
 // (transaction creation, alert review); the subject is embedded in the action
 // string. Callers must invoke this only after the business write succeeds,
 // ideally inside the same db.transaction() so the two stay atomic.
-export async function addAudit(db, investigationId, userId, action) {
+export function addAudit(db, investigationId, userId, action) {
   if (PG_MODE) {
     const sql = 'INSERT INTO audit (id, investigation_id, user_id, action, date) VALUES ($1, $2, $3, $4, $5)'
     const params = [
@@ -20,13 +20,11 @@ export async function addAudit(db, investigationId, userId, action) {
     // The INSERT must run through it so business write and audit row commit
     // or roll back together; the global pool must not be used in that case.
     if (db && typeof db.query === 'function') {
-      await db.query(sql, params)
-      return
+      return db.query(sql, params)
     }
-    await query(sql, params)
-    return
+    return query(sql, params)
   }
-  db.prepare('INSERT INTO audit (id, investigation_id, user_id, action, date) VALUES (?, ?, ?, ?, ?)').run(
+  return db.prepare('INSERT INTO audit (id, investigation_id, user_id, action, date) VALUES (?, ?, ?, ?, ?)').run(
     newId('audit'),
     investigationId,
     userId,

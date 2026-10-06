@@ -26,6 +26,10 @@ function Alerts({ alerts, products, transactions, users, selectedId, onSelect, o
   })
 
   const selected = alerts.find((a) => a.id === selectedId) || null
+  const snapshotTransactions = selected?.evidence?.transactions || []
+  const snapshotProducts = selected?.evidence?.products || []
+  const snapshotTxnById = Object.fromEntries(snapshotTransactions.map((t) => [t.id, t]))
+  const snapshotProductById = Object.fromEntries(snapshotProducts.map((p) => [p.id, p]))
   const existingInvestigation = selected
     ? investigations.find((i) => i.alertId === selected.id && i.status !== 'Closed') || null
     : null
@@ -106,6 +110,7 @@ function Alerts({ alerts, products, transactions, users, selectedId, onSelect, o
             <p><strong>{selected.type}</strong></p>
             <p>Severity: <span className={`badge badge-${selected.severity.toLowerCase()}`}>{selected.severity}</span></p>
             <p>Date: {formatDateTime(selected.date)}</p>
+            <p>Generated: {formatDateTime(selected.generatedAt)}</p>
             <p>Reason: {selected.message}</p>
             <p>Status: {selected.status}</p>
 
@@ -114,11 +119,13 @@ function Alerts({ alerts, products, transactions, users, selectedId, onSelect, o
                 <h3>Related transactions</h3>
                 <ul>
                   {selected.relatedTransactionIds.map((id) => {
-                    const t = txnById[id]
+                    const t = snapshotTxnById[id] || txnById[id]
                     if (!t) return <li key={id}>{id}</li>
+                    const productName = t.productName || (productById[t.productId] ? productById[t.productId].name : t.productId)
+                    const staffName = t.staffName || (userById[t.staffId] ? userById[t.staffId].name : t.staffId)
                     return (
                       <li key={id}>
-                        {formatDateTime(t.date)} — {t.type} — {productById[t.productId] ? productById[t.productId].name : t.productId} — ₦{t.amount.toLocaleString()} ({userById[t.staffId] ? userById[t.staffId].name : t.staffId})
+                        {formatDateTime(t.date)} — {t.type} — {productName} — ₦{Number(t.amount).toLocaleString()} ({staffName})
                       </li>
                     )
                   })}
@@ -131,9 +138,9 @@ function Alerts({ alerts, products, transactions, users, selectedId, onSelect, o
                 <h3>Related products</h3>
                 <ul>
                   {selected.relatedProductIds.map((id) => {
-                    const p = productById[id]
+                    const p = snapshotProductById[id] || productById[id]
                     if (!p) return <li key={id}>{id}</li>
-                    return <li key={id}>{p.name} — ₦{p.price.toLocaleString()} (stock {p.stock})</li>
+                    return <li key={id}>{p.name} — ₦{Number(p.price).toLocaleString()} (stock {p.stock}, expected {p.expectedStock})</li>
                   })}
                 </ul>
               </div>

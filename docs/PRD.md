@@ -6,7 +6,7 @@
 
 ### Tagline
 
-**Giving you smarter eyes.**
+**See what deserves your utmost attention.**
 
 ---
 
@@ -352,7 +352,7 @@ Transaction types may include:
 * Refund
 * Discount
 
-The MVP should allow authorized users to record transactions.
+The MVP should allow authorized users to record transactions. A successful sale reduces the selected product's stock by the transaction quantity; a successful refund increases stock by that quantity. A discount does not change stock. The transaction and stock movement are atomic, and a sale that would make stock negative is rejected.
 
 ---
 
@@ -376,9 +376,9 @@ Configurable rules and their defaults:
 * Unusual Transaction Frequency: more than 5 transactions within 60 minutes
 * Inventory Discrepancy: stock vs expectedStock; not configurable
 
-Because alerts are derived from the currently stored transaction data, changing a rule applies to all stored data. Existing alert statuses remain where the same deterministic alert ID continues to exist.
+Alerts are evaluated from the business's current recorded data. The first time a deterministic alert ID is generated, QubWatch stores an immutable snapshot of its reason, related IDs, evidence, generation time, and applicable rule values. Later reads do not duplicate or rewrite that snapshot when products, stock, or rule settings change. Existing statuses and investigation links remain attached to the stable alert ID. Because the previous implementation stored statuses but not reasons or evidence, alerts that stopped matching before migration 008 cannot be reconstructed exactly. Rule configuration is currently a shared singleton, not a per-business setting.
 
-Rule settings persist locally on the same browser and device and can be restored to the defaults above.
+Rule settings persist in the current database configuration and can be restored to the defaults above.
 
 ---
 
@@ -1032,7 +1032,7 @@ The primary experience should help the user quickly answer:
 
 After the MVP has been tested, future versions may include:
 
-* Real AI integration
+* Expanded AI capabilities
 * Machine-learning anomaly detection
 * Advanced analytics
 * Business forecasting
@@ -1057,7 +1057,7 @@ After the MVP has been tested, future versions may include:
 
 **QubWatch**
 
-**Giving you smarter eyes.**
+**See what deserves your utmost attention.**
 
 QubWatch is designed to help business owners see important business activities more clearly, notice unusual activity and investigate what deserves their attention.
 
@@ -1095,7 +1095,7 @@ The implementation uses the four product roles already defined in Section 33:
 3. Staff User
 4. Administrator
 
-The main persisted entities are Business, User, Product, Transaction, Alert, Investigation, Audit, and session data. SQL migrations create and evolve the database schema.
+The main persisted entities are Business, User, Product, Transaction, Alert Snapshot, Alert Status, Investigation, Audit, and session data. SQL migrations create and evolve the database schema; migration 008 creates alert snapshots in both SQLite and PostgreSQL.
 
 Demonstration accounts and business records use non-production test data. Real passwords, access tokens, and database files are not part of the public repository.
 
@@ -1116,6 +1116,10 @@ Demonstration accounts and business records use non-production test data. Real p
 
 - SQLite is the default local database when `DATABASE_URL` is not configured. PostgreSQL is used when `DATABASE_URL` is configured and is the supported production database configuration; production PostgreSQL connections require TLS with certificate validation.
 - The MVP uses deterministic, rule-based monitoring rather than advanced machine-learning anomaly detection.
+- Generated alerts are persisted as immutable historical snapshots with stable rule-generated IDs, generation-time evidence, related record IDs, and rule values. Statuses remain in the existing status workflow, and investigations continue to link by alert ID.
+- Successful sales and refunds update product stock atomically with transaction creation; discounts do not move stock, and sales cannot take stock below zero.
+- The server-side Groq AI Assistant is read-only. Its overview, alert, investigation, related-record, and user context is scoped to the authenticated user's business; cross-business alert and investigation IDs are treated as not found.
+- Business records for the main application routes are business-scoped, but monitoring rule configuration is still a shared singleton. This is an MVP limitation, not a claim of complete multi-tenant production isolation.
 - Authentication uses server-side sessions stored in the database; session tokens are delivered through HttpOnly cookies rather than localStorage.
 - Role permissions are enforced on the server for protected operations.
 - The frontend uses a shared API client so loading, empty, success, authentication, authorization, validation, and error states can be represented consistently.

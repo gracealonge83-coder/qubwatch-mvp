@@ -53,7 +53,7 @@ QubWatch helps authorized business users to:
 | Business Setup | Configure the business profile and manage authorized users. |
 | Dashboard | Overview of business activity, transactions, products, alerts and investigations. |
 | Products | Create and manage product records and inventory information. |
-| Transactions | Record and review business transactions and related details. |
+| Transactions | Record and review business transactions. Sales reduce stock and refunds increase stock atomically; discounts do not move stock. |
 | Monitoring Rules | Configure thresholds used to identify activity that may require attention. |
 | Alerts | Flag activity such as large transactions, repeated refunds, excessive discounts and unusual transaction frequency. |
 | Investigation | Review alerts and related records; document notes, findings, and resolutions. |
@@ -70,6 +70,10 @@ The MVP uses rule-based monitoring for activities such as:
 - Unusual transaction frequency
 
 These rules generate alerts when recorded activities meets configured conditions. An alert is **not a conclusion of wrongdoing**; it gives an authorized user something specific to review.
+
+The first generation of a deterministic alert ID is saved as an immutable snapshot, including its reason, generation time, related record IDs, generation-time evidence, and relevant rule values. Later Dashboard or Alerts reads do not create duplicates or rewrite the snapshot when product data or thresholds change. Alert statuses and investigation links remain attached to that stable ID.
+
+The previous implementation stored alert statuses but not alert reasons or evidence. As a result, migration 008 cannot reconstruct exact snapshots for alerts that stopped matching the current rules before the migration; active alerts are snapshotted the next time they are evaluated.
 
 ## Investigation
 
@@ -91,7 +95,7 @@ The QubWatch AI Assistant provides a natural-language way to ask questions about
 - “Show me the transactions related to this alert.”
 - “What patterns can be seen in these records?”
 
-The server-side Groq integration uses authorized QubWatch records supplied by the application. The assistant helps with investigation and analysis; it does not make accusations or final business decisions.
+The server-side Groq integration uses records scoped to the authenticated user's business, including alert and investigation context and the related transactions, products, and users. Cross-business alert and investigation IDs are treated as not found. The assistant helps with investigation and analysis; it is read-only and does not make accusations or final business decisions. Selected records are sent to Groq, so AI processing is not entirely local.
 
 > **AI assists the investigation; humans make the final decision.**
 
@@ -162,7 +166,7 @@ Groq and Paystack secret credentials are configured as server-side environment v
 
 ### Database Security
 
-SQLite is used locally when `DATABASE_URL` is not configured. Local PostgreSQL uses `DATABASE_URL`. On Netlify, the API prefers the managed database connection in `NETLIFY_DB_URL` and uses `DATABASE_URL` only if the managed variable is unavailable; it refuses to fall back to SQLite there. The connection string is read only by the server-side database layer. PostgreSQL migrations 004, 005, and 006 create the schema and preserve the assessment demo seed records. PostgreSQL migration startup is serialized with an advisory lock.
+SQLite is used locally when `DATABASE_URL` is not configured. Local PostgreSQL uses `DATABASE_URL`. On Netlify, the API prefers the managed database connection in `NETLIFY_DB_URL` and uses `DATABASE_URL` only if the managed variable is unavailable; it refuses to fall back to SQLite there. The connection string is read only by the server-side database layer. PostgreSQL migrations 004-008 create/evolve the schema and preserve the assessment demo seed records. Migration 008 adds historical alert snapshots in both supported database modes. PostgreSQL migration startup is serialized with an advisory lock.
 
 ### Netlify assessment deployment
 
@@ -170,11 +174,11 @@ The Netlify build publishes `dist` and bundles the existing Express API from the
 
 ### Production Security Considerations
 
-QubWatch is assessment/demo oriented and is not presented as a fully hardened multi-tenant SaaS platform. Its current data model is designed around a single-business/demo context and does not provide complete isolation for unrelated businesses sharing one database.
+QubWatch remains assessment/demo oriented and is not presented as a production-ready, fully hardened multi-tenant SaaS platform. Core business records used by AI, products, transactions, investigations, and alerts are scoped to the authenticated user's business. Monitoring rule configuration is currently a shared singleton rather than per-business configuration, so this MVP does not claim a complete enterprise isolation boundary.
 
-The audit trail is not claimed to be complete, immutable, or tamper-evident. Some PostgreSQL audit writes are not transactionally coupled to the related business operation. This MVP does not establish encryption-at-rest, backup or disaster-recovery guarantees, penetration testing, or regulatory compliance.
+Audit entries emitted for transaction creation, alert status changes, and investigation operations are written in the same SQLite/PostgreSQL transaction as those operations. The audit trail is not complete, immutable, or tamper-evident; other operations such as product and monitoring-rule changes do not currently create audit entries. This MVP does not establish encryption-at-rest, backup or disaster-recovery guarantees, penetration testing, or regulatory compliance.
 
-For a future public production deployment, configure secure environment-variable and secret management, HTTPS, validated PostgreSQL TLS, and appropriate operational controls. These production considerations do not change the intended Qubators assessment/demo scope.
+For a future public production deployment, make monitoring rules business-scoped, configure secure environment-variable and secret management, HTTPS, validated PostgreSQL TLS, and appropriate operational controls. These production considerations do not change the intended Qubators assessment/demo scope.
 
 ## Run locally
 

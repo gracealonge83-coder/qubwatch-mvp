@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { formatDateTime, txnDisplayNumber } from '../utils/formatDateTime.js'
 
 // Stage 2: view + record transactions, search and filtering (PRD Sections 15 + 31).
-// In-memory only. No monitoring rules, no alert generation.
+// The API persists transactions and applies the corresponding stock movement.
 function Transactions({ transactions, products, users, currentUser, onAdd }) {
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('all')
@@ -102,6 +102,7 @@ function Transactions({ transactions, products, users, currentUser, onAdd }) {
             <input name="discount" value={form.discount} onChange={handleChange} />
           </label>
           <p className="muted">Amount: ₦{previewAmount.toLocaleString()}</p>
+          <p className="muted">Sales reduce stock and refunds add stock automatically. Discounts do not change stock.</p>
           <button type="submit" className="primary-btn" disabled={busy}>{busy ? 'Recording…' : 'Record'}</button>
           {notice && <p role="status">{notice}</p>}
         </form>

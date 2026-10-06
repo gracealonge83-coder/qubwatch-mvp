@@ -36,16 +36,12 @@ const SYSTEM_RULES = [
   'Reply with JSON ONLY, no other text, using exactly these keys: knownInformation, analysis, possibleExplanations, suggestedNextSteps. Each value is an array of short strings.',
 ]
 
-function rowsOf(result) {
-  return result && Array.isArray(result.rows) ? result.rows : []
-}
-
-async function fetchUsers() {
+async function fetchUsers(businessId) {
   if (PG_MODE) {
-    const { rows } = await query('SELECT id, name, role FROM users ORDER BY created_at, id')
+    const { rows } = await query('SELECT id, name, role FROM users WHERE business_id = $1 ORDER BY created_at, id', [businessId])
     return rows
   }
-  return getDb().prepare('SELECT id, name, role FROM users ORDER BY rowid').all()
+  return getDb().prepare('SELECT id, name, role FROM users WHERE business_id = ? ORDER BY rowid').all(businessId)
 }
 
 function userLine(u) {
@@ -82,63 +78,94 @@ function txnLine(t, productById, userById) {
   return `${t.date} — ${t.type} — ${product ? product.name : t.productId} — qty ${t.quantity} — amount ${t.amount} — discount ${t.discount}% — ${staff ? staff.name : t.staffId}`
 }
 
-async function ruleLine(alert) {
-  const row = PG_MODE
-    ? (await query('SELECT * FROM rule_config WHERE id = 1')).rows[0]
-    : getDb().prepare('SELECT * FROM rule_config WHERE id = 1').get()
-  const n = (v) => Number(v)
+function ruleLine(alert) {
+  const values = alert.ruleValues || {}
   if (alert.type === 'Large transaction') {
-    return `Rule: flag transactions above ${n(row.large_amount)}.`
+    return `Rule at generation: flag transactions above ${Number(values.largeTransactionAmount)}.`
   }
   if (alert.type === 'Repeated refunds') {
-    return `Rule: flag more than ${n(row.refund_count)} refunds within ${n(row.refund_window_minutes)} minutes.`
+    return `Rule at generation: flag more than ${Number(values.refundCount)} refunds within ${Number(values.refundWindowMinutes)} minutes.`
   }
   if (alert.type === 'High discount') {
-    return `Rule: flag discounts at or above ${n(row.discount_pct)}%.`
+    return `Rule at generation: flag discounts at or above ${Number(values.excessiveDiscountPct)}%.`
   }
   if (alert.type === 'Unusual frequency') {
-    return `Rule: flag more than ${n(row.freq_count)} transactions within ${n(row.freq_window_minutes)} minutes.`
+    return `Rule at generation: flag more than ${Number(values.frequencyCount)} transactions within ${Number(values.frequencyWindowMinutes)} minutes.`
   }
-  return 'Rule: flag products whose recorded stock differs from expected stock.'
+  return 'Rule at generation: flag products whose recorded stock differs from expected stock.'
 }
 
-async function alertRecords(alertId) {
-  const alerts = await deriveAlerts(PG_MODE ? null : getDb())
+async function alertRecords(alertId, businessId) {
+  const alerts = await deriveAlerts(
+    PG_MODE ? null : getDb(),
+    businessId,
+    { persistSnapshots: false },
+  )
   const alert = alerts.find((a) => a.id === alertId)
   if (!alert) return null
-  const users = await fetchUsers()
+  const users = await fetchUsers(businessId)
   const userById = Object.fromEntries(users.map((u) => [u.id, u]))
-  const productById = {}
-  const txnById = {}
-  if (PG_MODE) {
-    for (const t of alert.relatedTransactionIds) {
-      const { rows } = await query('SELECT * FROM transactions WHERE id = $1', [t])
-      if (rows[0]) txnById[t] = rows[0]
-    }
-    const productIds = [...new Set(Object.values(txnById).map((t) => t.product_id))]
-    for (const p of productIds) {
-      const { rows } = await query('SELECT * FROM products WHERE id = $1', [p])
-      if (rows[0]) productById[p] = rows[0]
-    }
-  } else {
-    const db = getDb()
-    for (const t of alert.relatedTransactionIds) {
-      const row = db.prepare('SELECT * FROM transactions WHERE id = ?').get(t)
-      if (row) txnById[t] = row
-    }
-    const productIds = [...new Set(Object.values(txnById).map((t) => t.product_id))]
-    for (const p of productIds) {
-      const row = db.prepare('SELECT * FROM products WHERE id = ?').get(p)
-      if (row) productById[p] = row
-    }
-  }
-  return { alert, txnById, productById, userById, rule: await ruleLine(alert) }
+  const productById = Object.fromEntries(
+    alert.evidence.products.map((p) => [p.id, p]),
+  )
+  const txnById = Object.fromEntries(
+    alert.evidence.transactions
+      .filter((t) => productById[t.productId] && userById[t.staffId])
+      .map((t) => [t.id, t]),
+  )
+  return { alert, txnById, productById, userById, rule: ruleLine(alert) }
 }
 
-async function investigationRecords(invId) {
+async function scopedInvestigationEvidence(transactionIds, productIds, businessId, db) {
+  let transactions = []
+  let products = []
+  if (transactionIds.length > 0) {
+    transactions = PG_MODE
+      ? (await query(
+        `SELECT t.* FROM transactions t
+         JOIN products p ON p.id = t.product_id AND p.business_id = $2
+         JOIN users u ON u.id = t.staff_id AND u.business_id = $2
+         WHERE t.id = ANY($1::text[])`,
+        [transactionIds, businessId],
+      )).rows
+      : db.prepare(
+        `SELECT t.* FROM transactions t
+         JOIN products p ON p.id = t.product_id AND p.business_id = ?
+         JOIN users u ON u.id = t.staff_id AND u.business_id = ?
+         WHERE t.id IN (${transactionIds.map(() => '?').join(', ')})`,
+      ).all(businessId, businessId, ...transactionIds)
+  }
+  if (productIds.length > 0) {
+    products = PG_MODE
+      ? (await query(
+        'SELECT * FROM products WHERE id = ANY($1::text[]) AND business_id = $2',
+        [productIds, businessId],
+      )).rows
+      : db.prepare(
+        `SELECT * FROM products WHERE business_id = ?
+         AND id IN (${productIds.map(() => '?').join(', ')})`,
+      ).all(businessId, ...productIds)
+  }
+  return {
+    transactions: Object.fromEntries(transactions.map((t) => [t.id, t])),
+    products: Object.fromEntries(products.map((p) => [p.id, p])),
+  }
+}
+
+async function investigationRecords(invId, businessId) {
+  const db = PG_MODE ? null : getDb()
   const row = PG_MODE
-    ? (await query('SELECT * FROM investigations WHERE id = $1', [invId])).rows[0]
-    : getDb().prepare('SELECT * FROM investigations WHERE id = ?').get(invId)
+    ? (await query(
+      `SELECT i.* FROM investigations i
+       JOIN users u ON u.id = i.investigator_id AND u.business_id = $2
+       WHERE i.id = $1`,
+      [invId, businessId],
+    )).rows[0]
+    : db.prepare(
+      `SELECT i.* FROM investigations i
+       JOIN users u ON u.id = i.investigator_id AND u.business_id = ?
+       WHERE i.id = ?`,
+    ).get(businessId, invId)
   if (!row) return null
   const parse = (v) => {
     if (Array.isArray(v)) return v
@@ -157,27 +184,87 @@ async function investigationRecords(invId) {
     finding: row.finding,
     findingOther: row.finding_other,
     resolutionNotes: row.resolution_notes,
-    relatedTransactionIds: parse(row.related_transaction_ids),
-    relatedProductIds: parse(row.related_product_ids),
+    relatedTransactionIds: parse(row.related_transaction_ids).filter((id) => typeof id === 'string'),
+    relatedProductIds: parse(row.related_product_ids).filter((id) => typeof id === 'string'),
     notes: parse(row.notes),
+    alertType: row.alert_type,
+    alertSeverity: row.alert_severity,
   }
-  const alerts = await deriveAlerts(PG_MODE ? null : getDb())
-  const alert = alerts.find((a) => a.id === inv.alertId) || null
-  const users = await fetchUsers()
+  const linked = await alertRecords(inv.alertId, businessId)
+  const users = await fetchUsers(businessId)
   const userById = Object.fromEntries(users.map((u) => [u.id, u]))
-  return { inv, alert, userById }
+  let txnById
+  let productById
+  if (linked) {
+    const relatedTransactionIds = new Set(inv.relatedTransactionIds)
+    const relatedProductIds = new Set(inv.relatedProductIds)
+    txnById = Object.fromEntries(
+      linked.alert.evidence.transactions
+        .filter((t) => relatedTransactionIds.has(t.id) && userById[t.staffId])
+        .map((t) => [t.id, t]),
+    )
+    productById = Object.fromEntries(
+      linked.alert.evidence.products
+        .filter((p) => relatedProductIds.has(p.id))
+        .map((p) => [p.id, p]),
+    )
+  } else {
+    const evidence = await scopedInvestigationEvidence(
+      inv.relatedTransactionIds,
+      inv.relatedProductIds,
+      businessId,
+      db,
+    )
+    txnById = evidence.transactions
+    productById = evidence.products
+    inv.relatedTransactionIds = Object.keys(txnById)
+    inv.relatedProductIds = Object.keys(productById)
+  }
+  return { inv, alert: linked ? linked.alert : null, userById, txnById, productById }
 }
 
-async function overviewRecords() {
+async function overviewRecords(businessId) {
   const db = PG_MODE ? null : getDb()
-  const get = async (sql, params) => (PG_MODE ? rowsOf(await query(sql, params)) : db.prepare(sql).all(...(params || [])))
-  const one = async (sql, params) => (await get(sql, params))[0] || null
   const business = PG_MODE
-    ? (await query('SELECT * FROM businesses LIMIT 1')).rows[0]
-    : db.prepare('SELECT * FROM businesses LIMIT 1').get()
-  const counts = await one('SELECT (SELECT COUNT(*) FROM products) AS products, (SELECT COUNT(*) FROM transactions) AS transactions, (SELECT COUNT(*) FROM investigations) AS investigations')
-  const totals = await one("SELECT COALESCE(SUM(CASE WHEN type = 'sale' THEN amount ELSE 0 END), 0) AS sales, COALESCE(SUM(CASE WHEN type = 'refund' THEN amount ELSE 0 END), 0) AS refunds, COALESCE(SUM(CASE WHEN type = 'discount' THEN amount ELSE 0 END), 0) AS discounts FROM transactions")
-  const alerts = await deriveAlerts(db)
+    ? (await query('SELECT * FROM businesses WHERE id = $1', [businessId])).rows[0]
+    : db.prepare('SELECT * FROM businesses WHERE id = ?').get(businessId)
+  const alerts = await deriveAlerts(db, businessId, { persistSnapshots: false })
+  const counts = PG_MODE
+    ? (await query(
+      `SELECT (SELECT COUNT(*) FROM products WHERE business_id = $1) AS products,
+              (SELECT COUNT(*) FROM transactions t
+               JOIN products p ON p.id = t.product_id AND p.business_id = $1
+               JOIN users u ON u.id = t.staff_id AND u.business_id = $1) AS transactions,
+              (SELECT COUNT(*) FROM investigations i
+               JOIN users u ON u.id = i.investigator_id AND u.business_id = $1) AS investigations`,
+      [businessId],
+    )).rows[0]
+    : db.prepare(
+      `SELECT (SELECT COUNT(*) FROM products WHERE business_id = ?) AS products,
+              (SELECT COUNT(*) FROM transactions t
+               JOIN products p ON p.id = t.product_id AND p.business_id = ?
+               JOIN users u ON u.id = t.staff_id AND u.business_id = ?) AS transactions,
+              (SELECT COUNT(*) FROM investigations i
+               JOIN users u ON u.id = i.investigator_id AND u.business_id = ?) AS investigations`,
+    ).get(businessId, businessId, businessId, businessId)
+  const totals = PG_MODE
+    ? (await query(
+      `SELECT COALESCE(SUM(CASE WHEN t.type = 'sale' THEN t.amount ELSE 0 END), 0) AS sales,
+              COALESCE(SUM(CASE WHEN t.type = 'refund' THEN t.amount ELSE 0 END), 0) AS refunds,
+              COALESCE(SUM(CASE WHEN t.type = 'discount' THEN t.amount ELSE 0 END), 0) AS discounts
+       FROM transactions t
+       JOIN products p ON p.id = t.product_id AND p.business_id = $1
+       JOIN users u ON u.id = t.staff_id AND u.business_id = $1`,
+      [businessId],
+    )).rows[0]
+    : db.prepare(
+      `SELECT COALESCE(SUM(CASE WHEN t.type = 'sale' THEN t.amount ELSE 0 END), 0) AS sales,
+              COALESCE(SUM(CASE WHEN t.type = 'refund' THEN t.amount ELSE 0 END), 0) AS refunds,
+              COALESCE(SUM(CASE WHEN t.type = 'discount' THEN t.amount ELSE 0 END), 0) AS discounts
+       FROM transactions t
+       JOIN products p ON p.id = t.product_id AND p.business_id = ?
+       JOIN users u ON u.id = t.staff_id AND u.business_id = ?`,
+    ).get(businessId, businessId)
   const open = alerts.filter((a) => a.status === 'New' || a.status === 'Under Review').slice(0, 8)
   return { business, counts, totals, open, alertTotal: alerts.length }
 }
@@ -188,7 +275,7 @@ function buildPrompt(contextType, question, records) {
   if (contextType === 'alert') {
     const { alert, txnById, productById, userById, rule } = records
     const txns = alert.relatedTransactionIds.map((id) => txnById[id]).filter(Boolean).map(normTxn)
-    const products = [...new Set(txns.map((t) => t.productId))]
+    const products = alert.relatedProductIds
       .map((id) => productById[id])
       .filter(Boolean)
       .map(normProduct)
@@ -206,13 +293,23 @@ function buildPrompt(contextType, question, records) {
         .map((u) => `Staff on related transactions: ${userLine(u)}.`),
     ].join('\n')
   } else if (contextType === 'investigation') {
-    const { inv, alert, userById } = records
+    const { inv, alert, userById, txnById, productById } = records
     const investigator = userById[inv.investigatorId]
+    const txns = inv.relatedTransactionIds.map((id) => txnById[id]).filter(Boolean).map(normTxn)
+    const products = inv.relatedProductIds.map((id) => productById[id]).filter(Boolean).map(normProduct)
+    const productsById = Object.fromEntries(products.map((p) => [p.id, p]))
     recordsText = [
       `Investigation: ${inv.id} — status ${inv.status} — investigator ${investigator ? userLine(investigator) : inv.investigatorId}.`,
-      alert ? `Linked alert: ${alert.type} — severity ${alert.severity} — status ${alert.status}. Reason: ${alert.message}` : 'Linked alert is no longer present.',
+      alert
+        ? `Linked alert: ${alert.type} — severity ${alert.severity} — status ${alert.status}. Reason: ${alert.message}`
+        : `Linked alert snapshot is unavailable; stored alert type is ${inv.alertType} with severity ${inv.alertSeverity}.`,
+      ...(alert ? [ruleLine(alert)] : []),
       `Related transaction IDs: ${inv.relatedTransactionIds.join(', ') || 'none'}.`,
       `Related product IDs: ${inv.relatedProductIds.join(', ') || 'none'}.`,
+      ...txns.map((t) => txnLine(t, productsById, userById)),
+      ...products.map(
+        (p) => `Product at alert generation: ${p.name} (${p.category}) — price ${p.price} — stock ${p.stock}, expected ${p.expectedStock}.`,
+      ),
       ...inv.notes.map((n) => `Note by ${userById[n.authorId] ? userById[n.authorId].name : n.authorId} on ${n.date}: ${n.content}`),
       inv.finding ? `Recorded finding: ${inv.finding}${inv.finding === 'Other' ? ` — ${inv.findingOther}` : ''}.` : 'No finding recorded yet.',
       inv.resolutionNotes ? `Resolution notes: ${inv.resolutionNotes}.` : 'No resolution recorded yet.',
@@ -322,21 +419,21 @@ router.post('/ai', requireRole(...AI_REVIEWERS), async (req, res) => {
   let records = null
   let fallbackTitle = 'Business overview'
   if (contextType === 'alert') {
-    records = await alertRecords(contextId)
+    records = await alertRecords(contextId, req.user.businessId)
     if (!records) {
       res.status(404).json({ error: 'Alert not found' })
       return
     }
     fallbackTitle = `Summary: ${records.alert.type}`
   } else if (contextType === 'investigation') {
-    records = await investigationRecords(contextId)
+    records = await investigationRecords(contextId, req.user.businessId)
     if (!records) {
       res.status(404).json({ error: 'Investigation not found' })
       return
     }
     fallbackTitle = `Investigation ${records.inv.id}`
   } else {
-    records = await overviewRecords()
+    records = await overviewRecords(req.user.businessId)
   }
   const { guide, recordsText } = buildPrompt(contextType, question, records)
   const systemPrompt = `${SYSTEM_RULES.join('\n')}`

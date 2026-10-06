@@ -36,6 +36,7 @@ function largeTransactionRule(transactions, thresholds = DEMO_THRESHOLDS) {
       date: t.date,
       relatedTransactionIds: [t.id],
       relatedProductIds: [t.productId],
+      ruleValues: { largeTransactionAmount: thresholds.LARGE_TRANSACTION_AMOUNT },
     }))
 }
 
@@ -76,6 +77,10 @@ function repeatedRefundsRule(transactions, thresholds = DEMO_THRESHOLDS) {
     date: group[group.length - 1].date,
     relatedTransactionIds: group.map((t) => t.id),
     relatedProductIds: [...new Set(group.map((t) => t.productId))],
+    ruleValues: {
+      refundCount: thresholds.REPEATED_REFUNDS_COUNT,
+      refundWindowMinutes: thresholds.REPEATED_REFUNDS_WINDOW_MINUTES,
+    },
   }))
 }
 
@@ -90,6 +95,7 @@ function excessiveDiscountRule(transactions, thresholds = DEMO_THRESHOLDS) {
       date: t.date,
       relatedTransactionIds: [t.id],
       relatedProductIds: [t.productId],
+      ruleValues: { excessiveDiscountPct: thresholds.EXCESSIVE_DISCOUNT_PCT },
     }))
 }
 
@@ -107,6 +113,10 @@ function frequencyRule(transactions, thresholds = DEMO_THRESHOLDS) {
     date: group[group.length - 1].date,
     relatedTransactionIds: group.map((t) => t.id),
     relatedProductIds: [...new Set(group.map((t) => t.productId))],
+    ruleValues: {
+      frequencyCount: thresholds.FREQUENCY_COUNT,
+      frequencyWindowMinutes: thresholds.FREQUENCY_WINDOW_MINUTES,
+    },
   }))
 }
 
@@ -121,6 +131,7 @@ function inventoryRule(products) {
       date: 'Current stock',
       relatedTransactionIds: [],
       relatedProductIds: [p.id],
+      ruleValues: { comparison: 'stock != expectedStock' },
     }))
 }
 

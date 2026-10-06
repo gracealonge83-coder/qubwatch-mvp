@@ -38,7 +38,34 @@ function mapTransaction(row) {
     quantity: Number(row.quantity),
     amount: Number(row.amount),
     staffId: row.staff_id,
+    staffName: row.staff_name,
+    staffRole: row.staff_role,
     discount: Number(row.discount),
+  }
+}
+
+function parseJson(value, fallback) {
+  if (value && typeof value === 'object') return value
+  try {
+    return JSON.parse(value)
+  } catch {
+    return fallback
+  }
+}
+
+function mapSnapshot(row) {
+  return {
+    id: row.alert_id,
+    type: row.alert_type,
+    severity: row.severity,
+    message: row.message,
+    date: row.date,
+    generatedAt: formatWireDate(row.generated_at),
+    relatedTransactionIds: parseJson(row.related_transaction_ids, []),
+    relatedProductIds: parseJson(row.related_product_ids, []),
+    ruleValues: parseJson(row.rule_values, {}),
+    evidence: parseJson(row.evidence, { products: [], transactions: [] }),
+    status: row.status,
   }
 }
 
@@ -60,33 +87,142 @@ async function loadThresholds(db) {
   }
 }
 
-// Alerts stay derived: re-evaluated from the caller's own business data on
-// every read, with persisted statuses joined in. Exported for the
-// investigations routes.
-export async function deriveAlerts(db, businessId) {
+// Rules are evaluated for the caller's business on every read. New
+// deterministic alert IDs are snapshotted once; existing snapshots are never
+// rewritten when source data or rule values change.
+export async function deriveAlerts(db, businessId, { persistSnapshots = true } = {}) {
   const products = PG_MODE
     ? (await query('SELECT * FROM products WHERE business_id = $1 ORDER BY created_at, id', [businessId])).rows.map(mapProduct)
     : db.prepare('SELECT * FROM products WHERE business_id = ? ORDER BY rowid').all(businessId).map(mapProduct)
   const transactions = PG_MODE
     ? (await query(
-      `SELECT t.* FROM transactions t
+      `SELECT t.*, u.name AS staff_name, u.role AS staff_role FROM transactions t
        JOIN products p ON p.id = t.product_id AND p.business_id = $1
        JOIN users u ON u.id = t.staff_id AND u.business_id = $1
+       WHERE p.business_id = $1 AND u.business_id = $1
        ORDER BY t.created_at, t.id`,
       [businessId],
     )).rows.map(mapTransaction)
     : db.prepare(
-      `SELECT t.* FROM transactions t
+      `SELECT t.*, u.name AS staff_name, u.role AS staff_role FROM transactions t
        JOIN products p ON p.id = t.product_id AND p.business_id = ?
        JOIN users u ON u.id = t.staff_id AND u.business_id = ?
+       WHERE p.business_id = ? AND u.business_id = ?
        ORDER BY t.rowid`,
-    ).all(businessId, businessId).map(mapTransaction)
-  const base = evaluateRules(products, transactions, await loadThresholds(db))
-  const statusRows = PG_MODE
-    ? (await query('SELECT alert_id, status FROM alert_statuses')).rows
-    : db.prepare('SELECT alert_id, status FROM alert_statuses').all()
-  const statuses = Object.fromEntries(statusRows.map((r) => [r.alert_id, r.status]))
-  return base.map((a) => ({ ...a, status: statuses[a.id] || 'New' }))
+    ).all(businessId, businessId, businessId, businessId).map(mapTransaction)
+  const generated = evaluateRules(products, transactions, await loadThresholds(db))
+  const productById = Object.fromEntries(products.map((p) => [p.id, p]))
+  const transactionById = Object.fromEntries(transactions.map((t) => [t.id, t]))
+
+  const snapshots = generated.map((alert) => {
+    const evidence = {
+      products: alert.relatedProductIds
+       .map((id) => productById[id])
+       .filter(Boolean),
+      transactions: alert.relatedTransactionIds
+       .map((id) => transactionById[id])
+       .filter(Boolean)
+       .map((t) => {
+         const product = productById[t.productId]
+         return {
+           ...t,
+           productName: product ? product.name : t.productId,
+         }
+       }),
+    }
+    return {
+      ...alert,
+      generatedAt: nowStamp(),
+      businessId,
+      evidence,
+    }
+  })
+
+  if (PG_MODE) {
+    if (persistSnapshots && snapshots.length > 0) {
+      await withTransaction(async (t) => {
+       for (const alert of snapshots) {
+         await t.query(
+           `INSERT INTO alert_snapshots
+            (alert_id, business_id, alert_type, severity, message, date, generated_at,
+             related_transaction_ids, related_product_ids, rule_values, evidence)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            ON CONFLICT(alert_id) DO NOTHING`,
+           [
+             alert.id, businessId, alert.type, alert.severity, alert.message, alert.date,
+             alert.generatedAt, JSON.stringify(alert.relatedTransactionIds),
+             JSON.stringify(alert.relatedProductIds), JSON.stringify(alert.ruleValues),
+             JSON.stringify(alert.evidence),
+           ],
+         )
+       }
+      })
+    }
+    const { rows } = await query(
+      `SELECT s.*, COALESCE(st.status, 'New') AS status
+      FROM alert_snapshots s
+      LEFT JOIN alert_statuses st ON st.alert_id = s.alert_id
+      WHERE s.business_id = $1
+      ORDER BY s.generated_at DESC, s.alert_id`,
+      [businessId],
+    )
+    const persisted = rows.map(mapSnapshot)
+    if (persistSnapshots) return persisted
+    const existingIds = new Set(persisted.map((alert) => alert.id))
+    const unsaved = snapshots.filter((alert) => !existingIds.has(alert.id))
+    const statusRows = unsaved.length > 0
+      ? (await query(
+        'SELECT alert_id, status FROM alert_statuses WHERE alert_id = ANY($1::text[])',
+        [unsaved.map((alert) => alert.id)],
+      )).rows
+      : []
+    const statuses = Object.fromEntries(statusRows.map((row) => [row.alert_id, row.status]))
+    return [
+      ...persisted,
+      ...unsaved.map((alert) => ({ ...alert, status: statuses[alert.id] || 'New' })),
+    ]
+  }
+
+  if (persistSnapshots && snapshots.length > 0) {
+    db.transaction(() => {
+      const insert = db.prepare(
+        `INSERT INTO alert_snapshots
+         (alert_id, business_id, alert_type, severity, message, date, generated_at,
+          related_transaction_ids, related_product_ids, rule_values, evidence)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(alert_id) DO NOTHING`,
+      )
+      for (const alert of snapshots) {
+        insert.run(
+          alert.id, businessId, alert.type, alert.severity, alert.message, alert.date,
+          alert.generatedAt, JSON.stringify(alert.relatedTransactionIds),
+          JSON.stringify(alert.relatedProductIds), JSON.stringify(alert.ruleValues),
+          JSON.stringify(alert.evidence),
+        )
+      }
+    })()
+  }
+  const persisted = db.prepare(
+    `SELECT s.*, COALESCE(st.status, 'New') AS status
+     FROM alert_snapshots s
+     LEFT JOIN alert_statuses st ON st.alert_id = s.alert_id
+     WHERE s.business_id = ?
+     ORDER BY s.generated_at DESC, s.alert_id`,
+  ).all(businessId).map(mapSnapshot)
+  if (persistSnapshots) return persisted
+  const existingIds = new Set(persisted.map((alert) => alert.id))
+  const unsaved = snapshots.filter((alert) => !existingIds.has(alert.id))
+  const statusRows = unsaved.length > 0
+    ? db.prepare(
+      `SELECT alert_id, status FROM alert_statuses
+       WHERE alert_id IN (${unsaved.map(() => '?').join(', ')})`,
+    ).all(...unsaved.map((alert) => alert.id))
+    : []
+  const statuses = Object.fromEntries(statusRows.map((row) => [row.alert_id, row.status]))
+  return [
+    ...persisted,
+    ...unsaved.map((alert) => ({ ...alert, status: statuses[alert.id] || 'New' })),
+  ]
 }
 
 const router = Router()

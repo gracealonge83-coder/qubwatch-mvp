@@ -20,7 +20,7 @@ const DEMO_AUTOLOGIN = import.meta.env.VITE_QUBWATCH_DEMO === '1'
 
 // Stage 6 frontend API migration: the backend is the source of truth.
 // Pages keep the same props and UI; only the data layer changed.
-// No ML, no AI, no autonomous decisions.
+// No ML or autonomous decisions.
 function App() {
   const [page, setPage] = useState(() => (
     new URLSearchParams(window.location.search).get('billing') === 'callback'

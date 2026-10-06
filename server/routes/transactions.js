@@ -84,29 +84,82 @@ router.post('/transactions', requireRole(...RECORDERS), async (req, res) => {
     res.status(403).json({ error: 'Transactions may only be attributed to a user in your business' })
     return
   }
-  // Amount is always recomputed server-side; client previews are not trusted.
-  const amount = Math.round(Number(product.price) * body.quantity * (1 - (body.discount || 0) / 100))
+  // Amount is recomputed from the transaction's locked/current product row.
   const id = newId('txn')
   const date = nowStamp()
   if (PG_MODE) {
     let created = null
-    await withTransaction(async (t) => {
+    const result = await withTransaction(async (t) => {
+      const lockedProduct = (await t.query(
+        'SELECT * FROM products WHERE id = $1 AND business_id = $2 FOR UPDATE',
+        [body.productId, req.user.businessId],
+      )).rows[0]
+      if (!lockedProduct) return { missingProduct: true }
+      if (body.type === 'sale' && Number(lockedProduct.stock) < body.quantity) {
+        return { insufficientStock: true }
+      }
+      const transactionAmount = Math.round(
+        Number(lockedProduct.price) * body.quantity * (1 - (body.discount || 0) / 100),
+      )
       const inserted = await t.query(
         'INSERT INTO transactions (id, date, type, product_id, quantity, amount, staff_id, discount) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
-        [id, date, body.type, body.productId, body.quantity, amount, staffId, body.discount],
+        [id, date, body.type, body.productId, body.quantity, transactionAmount, staffId, body.discount],
       )
       created = inserted.rows[0]
+      if (body.type === 'sale' || body.type === 'refund') {
+        const delta = body.type === 'sale' ? -body.quantity : body.quantity
+        const updated = await t.query(
+          'UPDATE products SET stock = stock + $1 WHERE id = $2 AND business_id = $3 AND stock + $1 >= 0',
+          [delta, body.productId, req.user.businessId],
+        )
+        if (updated.rowCount !== 1) throw new Error('Product stock update failed during transaction creation.')
+      }
       await addAudit(t, null, req.user.id, `Transaction created: ${id}`)
+      return { created: true }
     })
+    if (result.missingProduct) {
+      res.status(404).json({ error: 'Product not found' })
+      return
+    }
+    if (result.insufficientStock) {
+      res.status(400).json({ error: 'Insufficient stock for this sale.' })
+      return
+    }
     res.status(201).json(mapTransaction(created))
     return
   }
-  db.transaction(() => {
+  const result = db.transaction(() => {
+    const currentProduct = db.prepare(
+      'SELECT * FROM products WHERE id = ? AND business_id = ?',
+    ).get(body.productId, req.user.businessId)
+    if (!currentProduct) return { missingProduct: true }
+    if (body.type === 'sale' && Number(currentProduct.stock) < body.quantity) {
+      return { insufficientStock: true }
+    }
+    const transactionAmount = Math.round(
+      Number(currentProduct.price) * body.quantity * (1 - (body.discount || 0) / 100),
+    )
     db.prepare(
       'INSERT INTO transactions (id, date, type, product_id, quantity, amount, staff_id, discount) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-    ).run(id, date, body.type, body.productId, body.quantity, amount, staffId, body.discount)
+    ).run(id, date, body.type, body.productId, body.quantity, transactionAmount, staffId, body.discount)
+    if (body.type === 'sale' || body.type === 'refund') {
+      const delta = body.type === 'sale' ? -body.quantity : body.quantity
+      const updated = db.prepare(
+        'UPDATE products SET stock = stock + ? WHERE id = ? AND business_id = ? AND stock + ? >= 0',
+      ).run(delta, body.productId, req.user.businessId, delta)
+      if (updated.changes !== 1) throw new Error('Product stock update failed during transaction creation.')
+    }
     addAudit(db, null, req.user.id, `Transaction created: ${id}`)
+    return { created: true }
   })()
+  if (result.missingProduct) {
+    res.status(404).json({ error: 'Product not found' })
+    return
+  }
+  if (result.insufficientStock) {
+    res.status(400).json({ error: 'Insufficient stock for this sale.' })
+    return
+  }
   const created = db.prepare('SELECT * FROM transactions WHERE id = ?').get(id)
   res.status(201).json(mapTransaction(created))
 })
