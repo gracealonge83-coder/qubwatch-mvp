@@ -319,6 +319,20 @@ tbody tr:hover { background: #f0fdfa; }
 .dash-alert strong { color: var(--ink); font-size: 13px; }
 .dash-alert .muted { font-size: 12px; }
 
+/* Primary review area: light teal treatment keeps attention above info. */
+.card-attention { border: 1px solid #99f6e4; border-top: 3px solid var(--teal); }
+.card-attention .section-title { font-size: 17px; }
+.safety-note {
+  display: block;
+  margin: 0 0 12px;
+  padding: 6px 9px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-soft);
+  color: var(--secondary);
+  font-size: 12px;
+}
+
 .badge, .pill {
   display: inline-flex;
   min-height: 23px;

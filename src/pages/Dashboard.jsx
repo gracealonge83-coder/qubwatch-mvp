@@ -59,6 +59,28 @@ function Dashboard({ business, user, users, products, transactions, alerts, open
       </div>
 
       <div className="grid" style={{ marginTop: '18px' }}>
+        <div className="card card-attention">
+          <div className="section-title">Needs attention</div>
+          <p className="muted safety-note">Signals for review. Not proof of wrongdoing.</p>
+          {openAlerts.length === 0 ? (
+            <p className="muted">No alerts need review right now.</p>
+          ) : (
+            <div>
+              {openAlerts.slice(0, 3).map((a) => (
+                <div key={a.id} className="dash-alert">
+                  <strong>{a.type}</strong>
+                  <span className="muted">{a.message}</span>
+                  <span className={`badge badge-${a.severity.toLowerCase()}`}>{a.severity}</span>
+                  <span><button className="secondary-btn" onClick={() => onReviewAlert(a.id)}>View alert</button></span>
+                </div>
+              ))}
+            </div>
+          )}
+          <button className="secondary-btn" onClick={() => onNavigate('Alerts')}>Open alerts</button>
+          <p className="muted">Open investigations: {openInvestigationCount}</p>
+          <button className="secondary-btn" onClick={() => onNavigate('Investigations')}>Open investigations</button>
+        </div>
+
         <div className="card">
           <div className="section-title">Business information</div>
           <p><strong>{business.name}</strong></p>
@@ -70,27 +92,6 @@ function Dashboard({ business, user, users, products, transactions, alerts, open
             <button className="secondary-btn" onClick={() => onNavigate('Products')}>View products</button>
             <button className="secondary-btn" onClick={() => onNavigate('Transactions')}>View transactions</button>
           </div>
-        </div>
-
-        <div className="card">
-          <div className="section-title">Needs attention</div>
-          {openAlerts.length === 0 ? (
-            <p className="muted">No alerts need review right now.</p>
-          ) : (
-            <div>
-              {openAlerts.slice(0, 3).map((a) => (
-                <div key={a.id} className="dash-alert">
-                  <strong>{a.type}</strong>
-                  <span className="muted">{a.message}</span>
-                  <span className={`badge badge-${a.severity.toLowerCase()}`}>{a.severity}</span>
-                  <span><button className="secondary-btn" onClick={() => onReviewAlert(a.id)}>Review</button></span>
-                </div>
-              ))}
-            </div>
-          )}
-          <button className="secondary-btn" onClick={() => onNavigate('Alerts')}>Open alerts</button>
-          <p className="muted">Open investigations: {openInvestigationCount}</p>
-          <button className="secondary-btn" onClick={() => onNavigate('Investigations')}>Open investigations</button>
         </div>
       </div>
 
