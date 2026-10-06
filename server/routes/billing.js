@@ -59,29 +59,35 @@ function database() {
   return PG_MODE ? null : getDb()
 }
 
-function findPayment(db, userId, reference) {
+function findPayment(db, userId, businessId, reference) {
   if (PG_MODE) {
     return query(
-      'SELECT * FROM billing_payments WHERE user_id = $1 AND reference = $2',
-      [userId, reference],
+      `SELECT b.* FROM billing_payments b JOIN users u ON u.id = b.user_id
+       WHERE b.user_id = $1 AND u.business_id = $2 AND b.reference = $3`,
+      [userId, businessId, reference],
     ).then(({ rows }) => rows[0] || null)
   }
   return Promise.resolve(
-    db.prepare('SELECT * FROM billing_payments WHERE user_id = ? AND reference = ?')
-      .get(userId, reference) || null,
+    db.prepare(
+      `SELECT b.* FROM billing_payments b JOIN users u ON u.id = b.user_id
+       WHERE b.user_id = ? AND u.business_id = ? AND b.reference = ?`,
+    ).get(userId, businessId, reference) || null,
   )
 }
 
-function latestPayment(db, userId) {
+function latestPayment(db, userId, businessId) {
   if (PG_MODE) {
     return query(
-      'SELECT * FROM billing_payments WHERE user_id = $1 ORDER BY created_at DESC, id DESC LIMIT 1',
-      [userId],
+      `SELECT b.* FROM billing_payments b JOIN users u ON u.id = b.user_id
+       WHERE b.user_id = $1 AND u.business_id = $2 ORDER BY b.created_at DESC, b.id DESC LIMIT 1`,
+      [userId, businessId],
     ).then(({ rows }) => rows[0] || null)
   }
   return Promise.resolve(
-    db.prepare('SELECT * FROM billing_payments WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT 1')
-      .get(userId) || null,
+    db.prepare(
+      `SELECT b.* FROM billing_payments b JOIN users u ON u.id = b.user_id
+       WHERE b.user_id = ? AND u.business_id = ? ORDER BY b.created_at DESC, b.id DESC LIMIT 1`,
+    ).get(userId, businessId) || null,
   )
 }
 
@@ -112,16 +118,18 @@ function insertPayment(db, payment) {
   return Promise.resolve()
 }
 
-function updatePaymentStatus(db, userId, reference, status, verifiedAt = null) {
+function updatePaymentStatus(db, userId, businessId, reference, status, verifiedAt = null) {
   if (PG_MODE) {
     return query(
-      'UPDATE billing_payments SET status = $1, verified_at = $2 WHERE user_id = $3 AND reference = $4',
-      [status, verifiedAt, userId, reference],
+      `UPDATE billing_payments SET status = $1, verified_at = $2 WHERE reference = $3
+       AND user_id = $4 AND EXISTS (SELECT 1 FROM users u WHERE u.id = $4 AND u.business_id = $5)`,
+      [status, verifiedAt, reference, userId, businessId],
     )
   }
   db.prepare(
-    'UPDATE billing_payments SET status = ?, verified_at = ? WHERE user_id = ? AND reference = ?',
-  ).run(status, verifiedAt, userId, reference)
+    `UPDATE billing_payments SET status = ?, verified_at = ? WHERE reference = ?
+     AND user_id = ? AND EXISTS (SELECT 1 FROM users u WHERE u.id = ? AND u.business_id = ?)`,
+  ).run(status, verifiedAt, reference, userId, userId, businessId)
   return Promise.resolve()
 }
 
@@ -158,7 +166,7 @@ const router = Router()
 router.use(requireAuth)
 
 router.get('/billing/status', requireRole(...OWNERS), async (req, res) => {
-  const row = await latestPayment(database(), req.user.id)
+  const row = await latestPayment(database(), req.user.id, req.user.businessId)
   res.json({
     active: !!row && row.status === 'verified',
     plan: row ? row.plan : null,
@@ -174,9 +182,7 @@ router.post('/billing/initialize', requireRole(...OWNERS), async (req, res) => {
     badRequest(res, { plan: 'Unknown plan.' })
     return
   }
-  const email = body.email === undefined
-    ? 'owner@qubwatch.demo'
-    : typeof body.email === 'string' ? body.email.trim() : ''
+  const email = typeof body.email === 'string' ? body.email.trim() : ''
   if (!validEmail(email)) {
     badRequest(res, { email: 'A valid email address is required.' })
     return
@@ -216,7 +222,7 @@ router.post('/billing/initialize', requireRole(...OWNERS), async (req, res) => {
     },
   })
   if (result.error) {
-    await updatePaymentStatus(db, req.user.id, reference, 'failed')
+    await updatePaymentStatus(db, req.user.id, req.user.businessId, reference, 'failed')
     if (result.error === 'NOT_CONFIGURED') {
       res.status(503).json({ error: 'Billing is not configured on the server.' })
       return
@@ -236,7 +242,7 @@ router.post('/billing/initialize', requireRole(...OWNERS), async (req, res) => {
     || checkoutUrl.hostname !== 'checkout.paystack.com'
     || checkoutUrl.username !== ''
     || checkoutUrl.password !== '') {
-    await updatePaymentStatus(db, req.user.id, reference, 'failed')
+    await updatePaymentStatus(db, req.user.id, req.user.businessId, reference, 'failed')
     res.status(502).json({ error: 'Billing could not start the payment. Please try again.' })
     return
   }
@@ -251,7 +257,7 @@ router.get('/billing/verify', requireRole(...OWNERS), async (req, res) => {
   }
 
   const db = database()
-  const payment = await findPayment(db, req.user.id, reference)
+  const payment = await findPayment(db, req.user.id, req.user.businessId, reference)
   if (!payment) {
     res.status(404).json({ error: 'Payment not found.' })
     return
@@ -288,13 +294,13 @@ router.get('/billing/verify', requireRole(...OWNERS), async (req, res) => {
 
   if (!validPayment) {
     if (transaction.status === 'failed' || transaction.status === 'abandoned') {
-      await updatePaymentStatus(db, req.user.id, reference, 'failed')
+      await updatePaymentStatus(db, req.user.id, req.user.businessId, reference, 'failed')
     }
     res.status(409).json({ error: 'Payment was not successful.', status: payment.status })
     return
   }
 
-  await updatePaymentStatus(db, req.user.id, reference, 'verified', nowStamp())
+  await updatePaymentStatus(db, req.user.id, req.user.businessId, reference, 'verified', nowStamp())
   res.json({ status: 'verified', plan: payment.plan })
 })
 

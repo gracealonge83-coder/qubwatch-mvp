@@ -25,7 +25,7 @@ const MIGRATIONS_DIR = path.join(process.cwd(), 'server', 'migrations')
 // SQLite 001-003 predate PostgreSQL support and contain SQLite-only dialect.
 // Migration 006 uses a portable subset and applies in both modes.
 const LEGACY_SQLITE_MIGRATION = /^(001|002|003)-/
-const SHARED_MIGRATION = /^006-/
+const SHARED_MIGRATION = /^006-|^007-/
 const MIGRATION_LOCK_ID = '718462993401'
 
 let sqliteDb = null

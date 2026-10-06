@@ -37,17 +37,17 @@ function Dashboard({ business, user, users, products, transactions, alerts, open
 
       <div className="kpi-grid">
         <div className="card kpi kpi-sales">
-          <div className="kpi-heading"><span className="kpi-icon"><Icon name="sales" /></span><div className="metric-label">Sales</div></div>
+          <div className="kpi-heading"><span className="kpi-icon"><Icon name="sales" /></span><div className="metric-label">Recorded sales</div></div>
           <div className="metric">₦{salesTotal.toLocaleString()}</div>
           <p className="muted">{sales.length} sales</p>
         </div>
         <div className="card kpi kpi-refunds">
-          <div className="kpi-heading"><span className="kpi-icon"><Icon name="refund" /></span><div className="metric-label">Refunds</div></div>
+          <div className="kpi-heading"><span className="kpi-icon"><Icon name="refund" /></span><div className="metric-label">Recorded refunds</div></div>
           <div className="metric">₦{refundTotal.toLocaleString()}</div>
           <p className="muted">{refunds.length} refunds</p>
         </div>
         <div className="card kpi kpi-discounts">
-          <div className="kpi-heading"><span className="kpi-icon"><Icon name="discount" /></span><div className="metric-label">Discounts</div></div>
+          <div className="kpi-heading"><span className="kpi-icon"><Icon name="discount" /></span><div className="metric-label">Recorded discounts</div></div>
           <div className="metric">₦{discountTotal.toLocaleString()}</div>
           <p className="muted">{discounts.length} discounted</p>
         </div>

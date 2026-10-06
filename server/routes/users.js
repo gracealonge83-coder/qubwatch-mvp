@@ -32,8 +32,8 @@ router.get('/users', async (req, res) => {
     return
   }
   const rows = PG_MODE
-    ? (await query('SELECT * FROM users ORDER BY created_at, id')).rows
-    : getDb().prepare('SELECT * FROM users ORDER BY rowid').all()
+    ? (await query('SELECT * FROM users WHERE business_id = $1 ORDER BY created_at, id', [req.user.businessId])).rows
+    : getDb().prepare('SELECT * FROM users WHERE business_id = ? ORDER BY rowid').all(req.user.businessId)
   res.json(rows.map(mapUser))
 })
 
@@ -53,8 +53,8 @@ router.post('/users', requireRole(...MANAGERS), async (req, res) => {
   }
   const db = PG_MODE ? null : getDb()
   const business = PG_MODE
-    ? (await query('SELECT id FROM businesses LIMIT 1')).rows[0]
-    : db.prepare('SELECT id FROM businesses LIMIT 1').get()
+    ? (await query('SELECT id FROM businesses WHERE id = $1', [req.user.businessId])).rows[0]
+    : db.prepare('SELECT id FROM businesses WHERE id = ?').get(req.user.businessId)
   if (!business) {
     res.status(500).json({ error: 'No business is set up yet' })
     return
@@ -97,8 +97,8 @@ router.patch('/users/:id', requireRole(...MANAGERS), async (req, res) => {
   }
   const db = PG_MODE ? null : getDb()
   const current = PG_MODE
-    ? (await query('SELECT * FROM users WHERE id = $1', [req.params.id])).rows[0]
-    : db.prepare('SELECT * FROM users WHERE id = ?').get(req.params.id)
+    ? (await query('SELECT * FROM users WHERE id = $1 AND business_id = $2', [req.params.id, req.user.businessId])).rows[0]
+    : db.prepare('SELECT * FROM users WHERE id = ? AND business_id = ?').get(req.params.id, req.user.businessId)
   if (!current) {
     res.status(404).json({ error: 'User not found' })
     return

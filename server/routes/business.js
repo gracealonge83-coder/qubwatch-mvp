@@ -23,8 +23,8 @@ router.use(requireAuth)
 
 router.get('/business', async (req, res) => {
   const row = PG_MODE
-    ? (await query('SELECT * FROM businesses LIMIT 1')).rows[0]
-    : getDb().prepare('SELECT * FROM businesses LIMIT 1').get()
+    ? (await query('SELECT * FROM businesses WHERE id = $1', [req.user.businessId])).rows[0]
+    : getDb().prepare('SELECT * FROM businesses WHERE id = ?').get(req.user.businessId)
   if (!row) {
     res.status(404).json({ error: 'Business not found' })
     return
@@ -54,8 +54,8 @@ router.patch('/business', requireRole(...MANAGERS), async (req, res) => {
   }
   const db = PG_MODE ? null : getDb()
   const current = PG_MODE
-    ? (await query('SELECT * FROM businesses LIMIT 1')).rows[0]
-    : db.prepare('SELECT * FROM businesses LIMIT 1').get()
+    ? (await query('SELECT * FROM businesses WHERE id = $1', [req.user.businessId])).rows[0]
+    : db.prepare('SELECT * FROM businesses WHERE id = ?').get(req.user.businessId)
   if (!current) {
     res.status(404).json({ error: 'Business not found' })
     return

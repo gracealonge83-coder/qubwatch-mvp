@@ -32,8 +32,19 @@ router.get('/transactions', async (req, res) => {
       ? (await query('SELECT * FROM transactions WHERE staff_id = $1 ORDER BY created_at, id', [req.user.id])).rows
       : getDb().prepare('SELECT * FROM transactions WHERE staff_id = ? ORDER BY rowid').all(req.user.id))
     : (PG_MODE
-      ? (await query('SELECT * FROM transactions ORDER BY created_at, id')).rows
-      : getDb().prepare('SELECT * FROM transactions ORDER BY rowid').all())
+      ? (await query(
+        `SELECT t.* FROM transactions t
+         JOIN products p ON p.id = t.product_id AND p.business_id = $1
+         JOIN users u ON u.id = t.staff_id AND u.business_id = $1
+         ORDER BY t.created_at, t.id`,
+        [req.user.businessId],
+      )).rows
+      : getDb().prepare(
+        `SELECT t.* FROM transactions t
+         JOIN products p ON p.id = t.product_id AND p.business_id = ?
+         JOIN users u ON u.id = t.staff_id AND u.business_id = ?
+         ORDER BY t.rowid`,
+      ).all(req.user.businessId, req.user.businessId))
   res.json(rows.map(mapTransaction))
 })
 
@@ -51,8 +62,8 @@ router.post('/transactions', requireRole(...RECORDERS), async (req, res) => {
   }
   const db = PG_MODE ? null : getDb()
   const product = PG_MODE
-    ? (await query('SELECT * FROM products WHERE id = $1', [body.productId])).rows[0]
-    : db.prepare('SELECT * FROM products WHERE id = ?').get(body.productId)
+    ? (await query('SELECT * FROM products WHERE id = $1 AND business_id = $2', [body.productId, req.user.businessId])).rows[0]
+    : db.prepare('SELECT * FROM products WHERE id = ? AND business_id = ?').get(body.productId, req.user.businessId)
   if (!product) {
     res.status(404).json({ error: 'Product not found' })
     return

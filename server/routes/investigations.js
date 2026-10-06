@@ -46,21 +46,43 @@ function mapInvestigation(row) {
 const router = Router()
 router.use(requireAuth)
 
+// Loads an investigation only if its investigator belongs to the caller's
+// business. Cross-business ids read as not found so existence is not leaked.
+async function findOwnedInvestigation(db, id, businessId) {
+  const row = PG_MODE
+    ? (await query(
+      `SELECT i.* FROM investigations i JOIN users u ON u.id = i.investigator_id
+       WHERE i.id = $1 AND u.business_id = $2`,
+      [id, businessId],
+    )).rows[0]
+    : db.prepare(
+      `SELECT i.* FROM investigations i JOIN users u ON u.id = i.investigator_id
+       WHERE i.id = ? AND u.business_id = ?`,
+    ).get(id, businessId)
+  return row || null
+}
+
 router.get('/investigations', async (req, res) => {
   if (!REVIEWERS.includes(req.user.role)) {
     res.json([])
     return
   }
   const rows = PG_MODE
-    ? (await query('SELECT * FROM investigations ORDER BY created_at, id')).rows
-    : getDb().prepare('SELECT * FROM investigations ORDER BY rowid').all()
+    ? (await query(
+      `SELECT i.* FROM investigations i JOIN users u ON u.id = i.investigator_id
+       WHERE u.business_id = $1 ORDER BY i.created_at, i.id`,
+      [req.user.businessId],
+    )).rows
+    : getDb().prepare(
+      `SELECT i.* FROM investigations i JOIN users u ON u.id = i.investigator_id
+       WHERE u.business_id = ? ORDER BY i.rowid`,
+    ).all(req.user.businessId)
   res.json(rows.map(mapInvestigation))
 })
 
 router.get('/investigations/:id', requireRole(...REVIEWERS), async (req, res) => {
-  const row = PG_MODE
-    ? (await query('SELECT * FROM investigations WHERE id = $1', [req.params.id])).rows[0]
-    : getDb().prepare('SELECT * FROM investigations WHERE id = ?').get(req.params.id)
+  const db = PG_MODE ? null : getDb()
+  const row = await findOwnedInvestigation(db, req.params.id, req.user.businessId)
   if (!row) {
     res.status(404).json({ error: 'Investigation not found' })
     return
@@ -75,7 +97,7 @@ router.post('/investigations', requireRole(...MANAGERS), async (req, res) => {
     return
   }
   const db = PG_MODE ? null : getDb()
-  const alert = (await deriveAlerts(db)).find((a) => a.id === body.alertId)
+  const alert = (await deriveAlerts(db, req.user.businessId)).find((a) => a.id === body.alertId)
   if (!alert) {
     res.status(404).json({ error: 'Alert not found' })
     return
@@ -160,9 +182,7 @@ router.post('/investigations/:id/notes', requireRole(...MANAGERS), async (req, r
     return
   }
   const db = PG_MODE ? null : getDb()
-  const row = PG_MODE
-    ? (await query('SELECT * FROM investigations WHERE id = $1', [req.params.id])).rows[0]
-    : db.prepare('SELECT * FROM investigations WHERE id = ?').get(req.params.id)
+  const row = await findOwnedInvestigation(db, req.params.id, req.user.businessId)
   if (!row) {
     res.status(404).json({ error: 'Investigation not found' })
     return
@@ -211,9 +231,7 @@ router.patch('/investigations/:id', requireRole(...MANAGERS), async (req, res) =
     return
   }
   const db = PG_MODE ? null : getDb()
-  const row = PG_MODE
-    ? (await query('SELECT * FROM investigations WHERE id = $1', [req.params.id])).rows[0]
-    : db.prepare('SELECT * FROM investigations WHERE id = ?').get(req.params.id)
+  const row = await findOwnedInvestigation(db, req.params.id, req.user.businessId)
   if (!row) {
     res.status(404).json({ error: 'Investigation not found' })
     return
@@ -223,8 +241,8 @@ router.patch('/investigations/:id', requireRole(...MANAGERS), async (req, res) =
     return
   }
   const investigator = PG_MODE
-    ? (await query('SELECT id, role FROM users WHERE id = $1', [body.investigatorId])).rows[0]
-    : db.prepare('SELECT id, role FROM users WHERE id = ?').get(body.investigatorId)
+    ? (await query('SELECT id, role FROM users WHERE id = $1 AND business_id = $2', [body.investigatorId, req.user.businessId])).rows[0]
+    : db.prepare('SELECT id, role FROM users WHERE id = ? AND business_id = ?').get(body.investigatorId, req.user.businessId)
   if (!investigator) {
     res.status(404).json({ error: 'User not found' })
     return
@@ -258,9 +276,7 @@ router.post('/investigations/:id/finding', requireRole(...MANAGERS), async (req,
     return
   }
   const db = PG_MODE ? null : getDb()
-  const row = PG_MODE
-    ? (await query('SELECT * FROM investigations WHERE id = $1', [req.params.id])).rows[0]
-    : db.prepare('SELECT * FROM investigations WHERE id = ?').get(req.params.id)
+  const row = await findOwnedInvestigation(db, req.params.id, req.user.businessId)
   if (!row) {
     res.status(404).json({ error: 'Investigation not found' })
     return
@@ -303,9 +319,7 @@ router.post('/investigations/:id/resolve', requireRole(...MANAGERS), async (req,
     return
   }
   const db = PG_MODE ? null : getDb()
-  const row = PG_MODE
-    ? (await query('SELECT * FROM investigations WHERE id = $1', [req.params.id])).rows[0]
-    : db.prepare('SELECT * FROM investigations WHERE id = ?').get(req.params.id)
+  const row = await findOwnedInvestigation(db, req.params.id, req.user.businessId)
   if (!row) {
     res.status(404).json({ error: 'Investigation not found' })
     return
@@ -355,9 +369,7 @@ router.post('/investigations/:id/resolve', requireRole(...MANAGERS), async (req,
 
 router.post('/investigations/:id/close', requireRole(...MANAGERS), async (req, res) => {
   const db = PG_MODE ? null : getDb()
-  const row = PG_MODE
-    ? (await query('SELECT * FROM investigations WHERE id = $1', [req.params.id])).rows[0]
-    : db.prepare('SELECT * FROM investigations WHERE id = ?').get(req.params.id)
+  const row = await findOwnedInvestigation(db, req.params.id, req.user.businessId)
   if (!row) {
     res.status(404).json({ error: 'Investigation not found' })
     return
@@ -388,9 +400,7 @@ router.post('/investigations/:id/close', requireRole(...MANAGERS), async (req, r
 })
 
 router.delete('/investigations/:id', requireRole(...MANAGERS), async (req, res) => {
-  const row = PG_MODE
-    ? (await query('SELECT * FROM investigations WHERE id = $1', [req.params.id])).rows[0]
-    : getDb().prepare('SELECT * FROM investigations WHERE id = ?').get(req.params.id)
+  const row = await findOwnedInvestigation(PG_MODE ? null : getDb(), req.params.id, req.user.businessId)
   if (!row) {
     res.status(404).json({ error: 'Investigation not found' })
     return

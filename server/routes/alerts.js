@@ -8,6 +8,16 @@ import { formatWireDate } from '../dates.js'
 
 const MANAGERS = ['Business Owner', 'Authorized Manager']
 
+// Valid alert status transitions. Terminal statuses (Resolved, Dismissed)
+// accept no further changes. Same-status updates are allowed as no-ops.
+const ALLOWED_TRANSITIONS = {
+  New: ['Under Review', 'Resolved', 'Dismissed'],
+  'Under Review': ['Resolved', 'Dismissed'],
+  Investigating: ['Resolved', 'Dismissed'],
+  Resolved: [],
+  Dismissed: [],
+}
+
 function mapProduct(row) {
   return {
     id: row.id,
@@ -50,15 +60,27 @@ async function loadThresholds(db) {
   }
 }
 
-// Alerts stay derived: re-evaluated from stored transactions on every read,
-// with persisted statuses joined in. Exported for the investigations routes.
-export async function deriveAlerts(db) {
+// Alerts stay derived: re-evaluated from the caller's own business data on
+// every read, with persisted statuses joined in. Exported for the
+// investigations routes.
+export async function deriveAlerts(db, businessId) {
   const products = PG_MODE
-    ? (await query('SELECT * FROM products ORDER BY created_at, id')).rows.map(mapProduct)
-    : db.prepare('SELECT * FROM products ORDER BY rowid').all().map(mapProduct)
+    ? (await query('SELECT * FROM products WHERE business_id = $1 ORDER BY created_at, id', [businessId])).rows.map(mapProduct)
+    : db.prepare('SELECT * FROM products WHERE business_id = ? ORDER BY rowid').all(businessId).map(mapProduct)
   const transactions = PG_MODE
-    ? (await query('SELECT * FROM transactions ORDER BY created_at, id')).rows.map(mapTransaction)
-    : db.prepare('SELECT * FROM transactions ORDER BY rowid').all().map(mapTransaction)
+    ? (await query(
+      `SELECT t.* FROM transactions t
+       JOIN products p ON p.id = t.product_id AND p.business_id = $1
+       JOIN users u ON u.id = t.staff_id AND u.business_id = $1
+       ORDER BY t.created_at, t.id`,
+      [businessId],
+    )).rows.map(mapTransaction)
+    : db.prepare(
+      `SELECT t.* FROM transactions t
+       JOIN products p ON p.id = t.product_id AND p.business_id = ?
+       JOIN users u ON u.id = t.staff_id AND u.business_id = ?
+       ORDER BY t.rowid`,
+    ).all(businessId, businessId).map(mapTransaction)
   const base = evaluateRules(products, transactions, await loadThresholds(db))
   const statusRows = PG_MODE
     ? (await query('SELECT alert_id, status FROM alert_statuses')).rows
@@ -75,7 +97,7 @@ router.get('/alerts', async (req, res) => {
     res.json([])
     return
   }
-  res.json(await deriveAlerts(PG_MODE ? null : getDb()))
+  res.json(await deriveAlerts(PG_MODE ? null : getDb(), req.user.businessId))
 })
 
 router.patch('/alerts/:id/status', requireRole(...MANAGERS), async (req, res) => {
@@ -88,9 +110,13 @@ router.patch('/alerts/:id/status', requireRole(...MANAGERS), async (req, res) =>
     return
   }
   const db = PG_MODE ? null : getDb()
-  const alert = (await deriveAlerts(db)).find((a) => a.id === req.params.id)
+  const alert = (await deriveAlerts(db, req.user.businessId)).find((a) => a.id === req.params.id)
   if (!alert) {
     res.status(404).json({ error: 'Alert not found' })
+    return
+  }
+  if (body.status !== alert.status && !(ALLOWED_TRANSITIONS[alert.status] || []).includes(body.status)) {
+    res.status(409).json({ error: 'Invalid alert status transition.' })
     return
   }
   if (PG_MODE) {
@@ -103,7 +129,7 @@ router.patch('/alerts/:id/status', requireRole(...MANAGERS), async (req, res) =>
       )
       await addAudit(t, null, req.user.id, `Alert reviewed: ${req.params.id} → ${body.status}`)
     })
-    const updated = (await deriveAlerts(db)).find((a) => a.id === req.params.id)
+    const updated = (await deriveAlerts(db, req.user.businessId)).find((a) => a.id === req.params.id)
     res.json(updated)
     return
   }
@@ -115,7 +141,7 @@ router.patch('/alerts/:id/status', requireRole(...MANAGERS), async (req, res) =>
     ).run(req.params.id, body.status, req.user.id, nowStamp())
     addAudit(db, null, req.user.id, `Alert reviewed: ${req.params.id} → ${body.status}`)
   })()
-  const updated = deriveAlerts(db).find((a) => a.id === req.params.id)
+  const updated = (await deriveAlerts(db, req.user.businessId)).find((a) => a.id === req.params.id)
   res.json(updated)
 })
 

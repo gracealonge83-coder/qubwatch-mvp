@@ -23,8 +23,8 @@ router.use(requireAuth)
 
 router.get('/products', async (req, res) => {
   const rows = PG_MODE
-    ? (await query('SELECT * FROM products ORDER BY created_at, id')).rows
-    : getDb().prepare('SELECT * FROM products ORDER BY rowid').all()
+    ? (await query('SELECT * FROM products WHERE business_id = $1 ORDER BY created_at, id', [req.user.businessId])).rows
+    : getDb().prepare('SELECT * FROM products WHERE business_id = ? ORDER BY rowid').all(req.user.businessId)
   res.json(rows.map(mapProduct))
 })
 
@@ -46,15 +46,15 @@ router.post('/products', requireRole(...MANAGERS), async (req, res) => {
   // exactly like the current frontend behavior.
   if (PG_MODE) {
     const { rows } = await query(
-      'INSERT INTO products (id, name, category, price, stock, expected_stock) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-      [id, body.name.trim(), body.category.trim(), body.price, body.stock, body.stock],
+      'INSERT INTO products (id, name, category, price, stock, expected_stock, business_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
+      [id, body.name.trim(), body.category.trim(), body.price, body.stock, body.stock, req.user.businessId],
     )
     res.status(201).json(mapProduct(rows[0]))
     return
   }
   db.prepare(
-    'INSERT INTO products (id, name, category, price, stock, expected_stock) VALUES (?, ?, ?, ?, ?, ?)',
-  ).run(id, body.name.trim(), body.category.trim(), body.price, body.stock, body.stock)
+    'INSERT INTO products (id, name, category, price, stock, expected_stock, business_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
+  ).run(id, body.name.trim(), body.category.trim(), body.price, body.stock, body.stock, req.user.businessId)
   const created = db.prepare('SELECT * FROM products WHERE id = ?').get(id)
   res.status(201).json(mapProduct(created))
 })
@@ -81,8 +81,8 @@ router.patch('/products/:id', requireRole(...MANAGERS), async (req, res) => {
   }
   const db = PG_MODE ? null : getDb()
   const current = PG_MODE
-    ? (await query('SELECT * FROM products WHERE id = $1', [req.params.id])).rows[0]
-    : db.prepare('SELECT * FROM products WHERE id = ?').get(req.params.id)
+    ? (await query('SELECT * FROM products WHERE id = $1 AND business_id = $2', [req.params.id, req.user.businessId])).rows[0]
+    : db.prepare('SELECT * FROM products WHERE id = ? AND business_id = ?').get(req.params.id, req.user.businessId)
   if (!current) {
     res.status(404).json({ error: 'Product not found' })
     return
