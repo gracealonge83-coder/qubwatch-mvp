@@ -1,18 +1,18 @@
 # QubWatch
 
-## AI-Powered Business Monitoring and Investigation Platform
+## AI-Powered Business Monitoring and Investigation Application
 
-**QubWatch — Giving you smarter eyes.**
+**QubWatch — See what deserves your utmost attention.**
 
-QubWatch is a business monitoring and investigation platform for business owners and authorized managers. It helps them identify unusual business activity, review operational patterns, and investigate transactions and events.
+QubWatch is a business monitoring and investigation platform for business owners and authorized managers. It helps them identify unusual business activities, review operational patterns and investigate transactions and events.
 
-It is designed especially for inventory-based, high-transaction businesses such as supermarkets, retail shops, and pharmacies, where owners and managers may not always be available to supervise daily operations.
+It is designed especially for inventory-based, high-transaction businesses such as supermarkets, retail shops and pharmacies where owners and managers may not always be available to supervise daily operations.
 
-QubWatch gives authorized business users greater visibility into recorded business activity and helps them focus on activity that may need review.
+QubWatch gives authorized business users greater visibility into recorded business activities and helps them focus on activities that may need review.
 
 ### Core principle
 
-QubWatch identifies activities that **require attention**. It does not automatically accuse staff of theft, fraud, or wrongdoing.
+QubWatch identifies activities that **require utmost attention**. It does not automatically accuse staff of theft, fraud or wrongdoing.
 
 > **Signals for review. Not proof of wrongdoing.**
 
@@ -20,7 +20,7 @@ Alerts are based on configured monitoring rules and available business records. 
 
 ## The problem
 
-Many business owners rely on employees and managers to handle sales, inventory, cash, products, and daily transactions. When the owner is away or unable to supervise operations, unusual activities or losses may be difficult to notice quickly.
+Many business owners rely on employees and managers to handle sales, inventory, cash, products and daily transactions. When the owner is away or unable to supervise operations, unusual activities or losses may be difficult to notice quickly.
 
 Examples include:
 
@@ -31,7 +31,7 @@ Examples include:
 - Unusual transaction patterns or frequency
 - Unexpected changes in business records
 
-Traditional business records can show **what happened** without clearly highlighting **what deserves attention**. QubWatch evaluates recorded activity against configured monitoring rules and brings potentially unusual patterns to authorized users' attention.
+Traditional business records can show **what happened** without clearly highlighting **what deserves utmost attention**. QubWatch evaluates recorded activiies against configured monitoring rules and brings potentially unusual patterns to authorized users' attention.
 
 ## The goal
 
@@ -51,11 +51,11 @@ QubWatch helps authorized business users to:
 | --- | --- |
 | Login | Authentication for authorized users. |
 | Business Setup | Configure the business profile and manage authorized users. |
-| Dashboard | Overview of business activity, transactions, products, alerts, and investigations. |
+| Dashboard | Overview of business activity, transactions, products, alerts and investigations. |
 | Products | Create and manage product records and inventory information. |
 | Transactions | Record and review business transactions and related details. |
 | Monitoring Rules | Configure thresholds used to identify activity that may require attention. |
-| Alerts | Flag activity such as large transactions, repeated refunds, excessive discounts, and unusual transaction frequency. |
+| Alerts | Flag activity such as large transactions, repeated refunds, excessive discounts and unusual transaction frequency. |
 | Investigation | Review alerts and related records; document notes, findings, and resolutions. |
 | AI Assistant | Server-side Groq AI integration for questions about authorized QubWatch records. Responses support human review and do not replace it. |
 | Audit | Record important system and business actions for accountability and review. |
@@ -69,7 +69,7 @@ The MVP uses rule-based monitoring for activities such as:
 - Excessive discounts
 - Unusual transaction frequency
 
-These rules generate alerts when recorded activity meets configured conditions. An alert is **not a conclusion of wrongdoing**; it gives an authorized user something specific to review.
+These rules generate alerts when recorded activities meets configured conditions. An alert is **not a conclusion of wrongdoing**; it gives an authorized user something specific to review.
 
 ## Investigation
 
@@ -248,4 +248,4 @@ docs/
 
 ## Product philosophy
 
-QubWatch highlights activity that may deserve attention, provides information for investigation, and keeps the final judgment with the authorized human user.
+QubWatch highlights activities that deserve utmost attention, provides information for investigation and keeps the final judgment with the authorized human user.
