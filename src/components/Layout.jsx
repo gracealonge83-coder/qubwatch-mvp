@@ -32,7 +32,7 @@ function Layout({ currentPage, onNavigate, businessName, notificationCount, onOp
           <div className="brand-mark" aria-hidden="true"><Icon name="dashboard" size={22} /></div>
           <div>
             <h1 className="brand">QubWatch</h1>
-            <p className="tagline">Giving you smarter eyes.</p>
+            <p className="tagline">See what deserves your utmost attention.</p>
           </div>
         </div>
 
@@ -66,7 +66,7 @@ function Layout({ currentPage, onNavigate, businessName, notificationCount, onOp
       <div className="shell-main">
         <header className="topbar">
           <div className="topbar-heading">
-            <span className="topbar-kicker">BUSINESS MONITORING</span>
+            <span className="topbar-kicker">BUSINESS MONITORING & INVESTIGATION</span>
             <h2>{currentPage}</h2>
             <p>{PAGE_DESCRIPTIONS[currentPage] || 'Business monitoring and investigation workspace.'}</p>
           </div>
@@ -92,7 +92,7 @@ function Layout({ currentPage, onNavigate, businessName, notificationCount, onOp
         <main className="main">{children}</main>
 
         <footer className="footer">
-          <p>QubWatch — Giving you smarter eyes.</p>
+          <p>QubWatch — See what deserves your utmost attention.</p>
         </footer>
       </div>
 

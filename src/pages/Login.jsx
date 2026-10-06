@@ -23,7 +23,7 @@ function Login({ onLogin }) {
       <header className="header">
         <div>
           <h1 className="brand">QubWatch</h1>
-          <p className="tagline">Giving you smarter eyes.</p>
+          <p className="tagline">See what deserves your utmost attention.</p>
         </div>
       </header>
       <main className="main">

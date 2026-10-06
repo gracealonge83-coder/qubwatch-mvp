@@ -1,7 +1,7 @@
 {
   "name": "QubWatch MVP",
   "short_name": "QubWatch",
-  "description": "QubWatch — Giving you smarter eyes. Business monitoring for small and medium-sized businesses.",
+  "description": "QubWatch — See what deserves your utmost attention. Business monitoring for small and medium-sized businesses.",
   "start_url": ".",
   "scope": ".",
   "display": "standalone",
