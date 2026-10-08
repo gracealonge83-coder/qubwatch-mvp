@@ -16,13 +16,13 @@ import ruleRoutes from './routes/rules.js'
 import aiRoutes from './routes/ai.js'
 import billingRoutes from './routes/billing.js'
 
-// Shared Express application for the local server and Netlify Function.
+// Shared Express application for the local server and Render production service.
 export const app = express()
 
-const allowedOrigin = process.env.FRONTEND_ORIGIN || 'https://qubwatch.netlify.app'
+const allowedOrigin = process.env.FRONTEND_ORIGIN || null
 app.use((req, res, next) => {
   const origin = req.headers.origin
-  if (origin === allowedOrigin) {
+  if (allowedOrigin && origin === allowedOrigin) {
     res.setHeader('Access-Control-Allow-Origin', origin)
     res.setHeader('Access-Control-Allow-Credentials', 'true')
     res.setHeader('Vary', 'Origin')
@@ -54,6 +54,16 @@ app.use('/api', auditRoutes)
 app.use('/api', ruleRoutes)
 app.use('/api', aiRoutes)
 app.use('/api', billingRoutes)
+
+// In production Render serves the built PWA and API from the same origin.
+if (process.env.NODE_ENV === 'production') {
+  const distDir = path.resolve(process.cwd(), 'dist')
+  app.use(express.static(distDir))
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api/')) return next()
+    res.sendFile(path.join(distDir, 'index.html'))
+  })
+}
 
 let initialization
 export function initialize() {
