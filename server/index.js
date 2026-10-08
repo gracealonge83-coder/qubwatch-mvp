@@ -59,7 +59,7 @@ app.use('/api', billingRoutes)
 if (process.env.NODE_ENV === 'production') {
   const distDir = path.resolve(process.cwd(), 'dist')
   app.use(express.static(distDir))
-  app.get('*', (req, res, next) => {
+  app.use((req, res, next) => {
     if (req.path.startsWith('/api/')) return next()
     res.sendFile(path.join(distDir, 'index.html'))
   })
