@@ -54,8 +54,14 @@ function postgresConnectionString() {
   return url.toString()
 }
 
-function tlsRootCertificates() {
-  return tls.rootCertificates
+function tlsTrustCertificates() {
+  // Node 24 can expose the platform CA store in addition to its bundled Mozilla roots.
+  // Keep both stores available, then add the explicitly supplied Supabase CA.
+  const bundled = tls.rootCertificates
+  const system = typeof tls.getCACertificates === 'function'
+    ? tls.getCACertificates('system')
+    : []
+  return [...bundled, ...system]
 }
 
 function postgresSslConfig() {
@@ -71,7 +77,7 @@ function postgresSslConfig() {
     // public roots. This keeps Supabase's private CA trusted while preserving
     // compatibility with any public intermediates in the pooler's chain.
     rejectUnauthorized: production,
-    ...(ca ? { ca: [ca, ...tlsRootCertificates()] } : {}),
+    ...(ca ? { ca: [ca, ...tlsTrustCertificates()] } : {}),
   }
 }
 
