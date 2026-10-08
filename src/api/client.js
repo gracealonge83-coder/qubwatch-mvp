@@ -2,10 +2,14 @@
 // Native fetch only. The HttpOnly session cookie is sent automatically
 // (credentials: 'include'); tokens and passwords never touch localStorage.
 // Every call resolves to { ok, status, data, error, fields } — never throws.
+const API_BASE_URL = import.meta.env.PROD
+  ? 'https://qubwatch.onrender.com/api'
+  : '/api'
+
 async function request(path, { method = 'GET', body } = {}) {
   let res
   try {
-    res = await fetch('/api' + path, {
+    res = await fetch(API_BASE_URL + path, {
       method,
       credentials: 'include',
       headers: body !== undefined ? { 'Content-Type': 'application/json' } : {},
