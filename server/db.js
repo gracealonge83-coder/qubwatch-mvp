@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import Database from 'better-sqlite3'
 import pg from 'pg'
+import tls from 'node:tls'
 
 // Dual-driver database layer (PG foundation stage).
 //
@@ -53,6 +54,10 @@ function postgresConnectionString() {
   return url.toString()
 }
 
+function tlsRootCertificates() {
+  return tls.rootCertificates
+}
+
 function postgresSslConfig() {
   const production = process.env.NODE_ENV === 'production'
   const enabled = production || process.env.PGSSL === '1'
@@ -61,10 +66,12 @@ function postgresSslConfig() {
   const caFile = process.env.PGSSL_CA_FILE
   const ca = caFile ? fs.readFileSync(caFile, 'utf8') : undefined
   return {
-    // Preserve the existing opt-in local SSL behavior; production always
-    // validates the server against system roots or the configured CA file.
+    // Preserve verified TLS in production. When a provider CA is supplied,
+    // append it to Node's normal trust store instead of replacing the default
+    // public roots. This keeps Supabase's private CA trusted while preserving
+    // compatibility with any public intermediates in the pooler's chain.
     rejectUnauthorized: production,
-    ...(ca ? { ca } : {}),
+    ...(ca ? { ca: [ca, ...tlsRootCertificates()] } : {}),
   }
 }
 
