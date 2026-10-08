@@ -137,10 +137,12 @@ export async function purgeExpired(db) {
 }
 
 function cookieAttributes(maxAge) {
-  const secure = process.env.NODE_ENV === 'production' || process.env.COOKIE_SECURE === '1'
-    ? '; Secure'
-    : ''
-  return `Path=/; HttpOnly; SameSite=Lax${secure}; Max-Age=${maxAge}`
+  const production = process.env.NODE_ENV === 'production'
+  const secure = production || process.env.COOKIE_SECURE === '1' ? '; Secure' : ''
+  // The production PWA is hosted separately from the Render API, so its
+  // HttpOnly session cookie must be sent cross-origin.
+  const sameSite = production ? 'None' : 'Lax'
+  return `Path=/; HttpOnly; SameSite=${sameSite}${secure}; Max-Age=${maxAge}`
 }
 
 export function setSessionCookie(res, token) {
