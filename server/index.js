@@ -18,6 +18,24 @@ import billingRoutes from './routes/billing.js'
 
 // Shared Express application for the local server and Netlify Function.
 export const app = express()
+
+const allowedOrigin = process.env.FRONTEND_ORIGIN || 'https://qubwatch.netlify.app'
+app.use((req, res, next) => {
+  const origin = req.headers.origin
+  if (origin === allowedOrigin) {
+    res.setHeader('Access-Control-Allow-Origin', origin)
+    res.setHeader('Access-Control-Allow-Credentials', 'true')
+    res.setHeader('Vary', 'Origin')
+  }
+  if (req.method === 'OPTIONS') {
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,PUT,DELETE,OPTIONS')
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+    res.status(204).end()
+    return
+  }
+  next()
+})
+
 app.use(express.json())
 app.use(attachUser())
 
