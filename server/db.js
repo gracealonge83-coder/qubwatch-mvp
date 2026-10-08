@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import Database from 'better-sqlite3'
 import pg from 'pg'
+import tls from 'node:tls'
 
 // Dual-driver database layer (PG foundation stage).
 //
@@ -53,6 +54,16 @@ function postgresConnectionString() {
   return url.toString()
 }
 
+function tlsTrustCertificates() {
+  // Node 24 can expose the platform CA store in addition to its bundled Mozilla roots.
+  // Keep both stores available, then add the explicitly supplied Supabase CA.
+  const bundled = tls.rootCertificates
+  const system = typeof tls.getCACertificates === 'function'
+    ? tls.getCACertificates('system')
+    : []
+  return [...bundled, ...system]
+}
+
 function postgresSslConfig() {
   const production = process.env.NODE_ENV === 'production'
   const enabled = production || process.env.PGSSL === '1'
@@ -60,11 +71,23 @@ function postgresSslConfig() {
 
   const caFile = process.env.PGSSL_CA_FILE
   const ca = caFile ? fs.readFileSync(caFile, 'utf8') : undefined
+
+  // Supabase's shared Session Pooler is TLS-encrypted but its presented
+  // certificate chain can be rejected by Node's verifier even when the
+  // project CA is supplied. Supabase documents sslmode=require as the
+  // compatibility mode for pooler clients: encryption is mandatory, while
+  // certificate/hostname verification is not performed.
+  //
+  // Keep strict certificate verification for ordinary PostgreSQL endpoints.
+  const hostname = new URL(DATABASE_URL).hostname
+  const isSupabasePooler = hostname.endsWith('.pooler.supabase.com')
+  if (production && isSupabasePooler && process.env.PGSSL_VERIFY !== '1') {
+    return { rejectUnauthorized: false }
+  }
+
   return {
-    // Preserve the existing opt-in local SSL behavior; production always
-    // validates the server against system roots or the configured CA file.
     rejectUnauthorized: production,
-    ...(ca ? { ca } : {}),
+    ...(ca ? { ca: [ca, ...tlsTrustCertificates()] } : {}),
   }
 }
 
