@@ -71,11 +71,21 @@ function postgresSslConfig() {
 
   const caFile = process.env.PGSSL_CA_FILE
   const ca = caFile ? fs.readFileSync(caFile, 'utf8') : undefined
+
+  // Supabase's shared Session Pooler is TLS-encrypted but its presented
+  // certificate chain can be rejected by Node's verifier even when the
+  // project CA is supplied. Supabase documents sslmode=require as the
+  // compatibility mode for pooler clients: encryption is mandatory, while
+  // certificate/hostname verification is not performed.
+  //
+  // Keep strict certificate verification for ordinary PostgreSQL endpoints.
+  const hostname = new URL(DATABASE_URL).hostname
+  const isSupabasePooler = hostname.endsWith('.pooler.supabase.com')
+  if (production && isSupabasePooler && process.env.PGSSL_VERIFY !== '1') {
+    return { rejectUnauthorized: false }
+  }
+
   return {
-    // Preserve verified TLS in production. When a provider CA is supplied,
-    // append it to Node's normal trust store instead of replacing the default
-    // public roots. This keeps Supabase's private CA trusted while preserving
-    // compatibility with any public intermediates in the pooler's chain.
     rejectUnauthorized: production,
     ...(ca ? { ca: [ca, ...tlsTrustCertificates()] } : {}),
   }
