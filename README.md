@@ -132,7 +132,7 @@ QubWatch is initially designed for:
 
 - **Frontend:** React 19, JavaScript, and Vite
 - **Backend:** Node.js and Express
-- **Database:** SQLite via `better-sqlite3` for local development by default; PostgreSQL with `pg` via local `DATABASE_URL` or Netlify's managed `NETLIFY_DB_URL`
+- **Database:** SQLite via `better-sqlite3` remains available for local development; production uses Supabase-hosted PostgreSQL via the Render backend's server-side `DATABASE_URL`. Database credentials are never placed in frontend configuration or source control.
 - **Authentication:** Server-side sessions with HttpOnly cookies and scrypt password hashing
 - **AI integration:** Groq API called by the server
 - **Payment demonstration:** Paystack Test Mode; owner-only and server-verified
@@ -166,11 +166,11 @@ Groq and Paystack secret credentials are configured as server-side environment v
 
 ### Database Security
 
-SQLite is used locally when `DATABASE_URL` is not configured. Local PostgreSQL uses `DATABASE_URL`. On Netlify, the API prefers the managed database connection in `NETLIFY_DB_URL` and uses `DATABASE_URL` only if the managed variable is unavailable; it refuses to fall back to SQLite there. The connection string is read only by the server-side database layer. PostgreSQL migrations 004-008 create/evolve the schema and preserve the assessment demo seed records. Migration 008 adds historical alert snapshots in both supported database modes. PostgreSQL migration startup is serialized with an advisory lock.
+SQLite is used locally when `DATABASE_URL` is not configured. PostgreSQL uses `DATABASE_URL`; production on Render uses Supabase-hosted PostgreSQL. The connection string is handled only by the server-side database layer. PostgreSQL migrations 004-008 create/evolve the schema and preserve the assessment demo seed records. Migration 008 adds historical alert snapshots in both supported database modes. PostgreSQL migration startup is serialized with an advisory lock.
 
-### Netlify assessment deployment
+### Production deployment
 
-The Netlify build publishes `dist` and bundles the existing Express API from the ESM Netlify Function entry point `netlify/functions/api.js`. The Function imports the same Express app and routes used by `npm run dev:api`; local Vite development continues to proxy `/api` to `localhost:3001`. Netlify provides `NETLIFY_DB_URL` for the managed PostgreSQL database, so no database connection string belongs in frontend configuration or source control.
+QubWatch is deployed on Render, which serves the production frontend and Express API. Production PostgreSQL is hosted by Supabase, and the frontend communicates with the production API. Local Vite development continues to use the local API setup and proxy `/api` to `localhost:3001`.
 
 ### Production Security Considerations
 
@@ -178,7 +178,7 @@ QubWatch remains assessment/demo oriented and is not presented as a production-r
 
 Audit entries emitted for transaction creation, alert status changes, and investigation operations are written in the same SQLite/PostgreSQL transaction as those operations. The audit trail is not complete, immutable, or tamper-evident; other operations such as product and monitoring-rule changes do not currently create audit entries. This MVP does not establish encryption-at-rest, backup or disaster-recovery guarantees, penetration testing, or regulatory compliance.
 
-For a future public production deployment, make monitoring rules business-scoped, configure secure environment-variable and secret management, HTTPS, validated PostgreSQL TLS, and appropriate operational controls. These production considerations do not change the intended Qubators assessment/demo scope.
+QubWatch is currently deployed on Render with Supabase-hosted PostgreSQL. Additional production hardening remains appropriate, including business-scoped monitoring rules, secure environment-variable and secret management, validated PostgreSQL TLS, and appropriate operational controls. This remains an assessment/MVP product and should not be presented as a fully hardened multi-tenant SaaS.
 
 ## Run locally
 

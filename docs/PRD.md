@@ -74,7 +74,7 @@ The business owner can:
 
 A manager authorized by the business owner to monitor and manage business activities.
 
-The manager's access depends on the permissions assigned to the user.
+The Authorized Manager has role-based operational management permissions within the business, including management of Staff Users. The role does not include privileged Business Owner or Administrator control.
 
 ## 4.3 Staff User
 
@@ -84,9 +84,9 @@ Staff access is more limited than owner or manager access.
 
 ## 4.4 Administrator
 
-An administrative user responsible for basic system administration.
+The Administrator is a review/read-oriented role with access to permitted business information and AI assistance.
 
-Administrator functionality will remain limited in the MVP.
+The Administrator does not have normal business-management write permissions, including permissions to manage teams, products, monitoring rules, or transaction status.
 
 ---
 
@@ -143,16 +143,15 @@ The web application should work properly on:
 
 The interface should adapt to different screen sizes.
 
-### Mobile App
+The current implementation is a responsive web application and installable Progressive Web App (PWA), with mobile-responsive navigation and UI, using the QubWatch backend/API.
 
-The product should also have an installable mobile application for:
+### Android and iOS
 
-* Android
-* iOS
+QubWatch is intended to be available on Android and iOS as well as the web. Android and iOS are deployment/package targets of the same QubWatch product and should use the shared application backend/API.
 
-The mobile experience should provide access to the core QubWatch monitoring workflow.
+The existing responsive PWA provides the current web and mobile UI foundation. Android packaging, including the APK required for the current assessment, remains deployment work. iOS packaging and distribution are also product targets; no native Android or iOS implementation is currently present in the repository.
 
-The mobile application should prioritize:
+The Android and iOS experiences should provide access to the core QubWatch monitoring workflow, prioritizing:
 
 * Dashboard
 * Alerts
@@ -172,7 +171,7 @@ The MVP includes:
 * Business setup
 * User access and basic roles
 * Team management (basic)
-* Browser-local persistence of operational records
+* Backend/database persistence of operational records: SQLite for local development when `DATABASE_URL` is not configured, and Supabase-hosted PostgreSQL in production through the Render backend's server-side `DATABASE_URL`
 * Products
 * Transactions
 * Dashboard
@@ -194,8 +193,10 @@ The MVP includes:
 * Server-enforced role permissions for sensitive actions
 * Complete UI states (loading, empty, success, error) for backend-connected operations
 * Server-side validation of all writes
-* Responsive web interface
-* Mobile application
+* Responsive web interface and installable PWA with mobile-responsive navigation/UI
+* Android and iOS deployment/package targets using the QubWatch product and shared backend/API
+
+The PWA may cache application assets. QubWatch does not currently implement browser-local operational data storage as the system of record or operational-data offline synchronization.
 
 ---
 
@@ -227,7 +228,7 @@ The following are outside the first MVP:
 
 These features may be considered in later versions.
 
-Assessment exception: a Paystack Test Mode subscription/payment demonstration may be included solely to demonstrate a payment-gateway integration required for the assessment. It is not QubWatch's operational payment-processing functionality, does not process supermarket/customer payments, uses Test Mode only with no real-money transactions, and full payment integrations remain outside the normal MVP scope.
+Assessment exception: the current assessment build includes a Paystack Test Mode subscription/payment demonstration solely to demonstrate a payment-gateway integration. It is not QubWatch's operational payment-processing functionality, does not process supermarket/customer payments, uses Test Mode only with no real-money transactions, and full payment integrations remain outside the normal MVP scope.
 
 The demonstration is available only to the Business Owner in Settings. It offers a server-validated QubWatch monthly plan of ₦5,000 (50,000 kobo); plan and amount are defined by the server. The Paystack secret key must be configured as `PAYSTACK_SECRET_KEY` in the API server's private `.env` file using a Test Mode secret key (`sk_test_...`). Production deployments must set `APP_URL` to the exact HTTPS application origin for the Paystack return URL. Successful subscription status is recorded only after the server verifies the transaction with Paystack.
 
@@ -266,8 +267,7 @@ The MVP may initially use a simple business setup form.
 
 The business profile remains editable through Settings after initial setup.
 Saving updates the business information, and the saved business information is reflected on the Dashboard and header where applicable.
-Saved business information persists via the backend database so it remains available after page refresh and when the user reopens QubWatch; browser-local storage may remain as an offline cache.
-The backend database is the system of record for operational records (products, transactions, alerts, investigations and audit records). Browser-local persistence may remain as an offline/cache layer for the existing client experience; it is not the authoritative source of backend-connected records.
+Business and operational records persist through the QubWatch backend/database. Local development can use SQLite when `DATABASE_URL` is not configured; production uses Supabase-hosted PostgreSQL through the Render backend's server-side `DATABASE_URL`. The PWA may cache application assets, but QubWatch does not currently implement browser-local operational data synchronization or offline database synchronization.
 
 ---
 
@@ -402,7 +402,7 @@ Example:
 
 Example:
 
-> Discounts exceed the defined percentage threshold.
+> Discounts are at or above the defined percentage threshold (currently 20% by default).
 
 ### Unusual Transaction Frequency
 
@@ -438,12 +438,11 @@ Alerts should provide enough information for the user to understand why the aler
 
 # 19. Alert Severity
 
-The MVP should support four severity levels:
-
 * Low
 * Medium
 * High
-* Critical
+
+The implemented monitoring rules currently generate Low, Medium, and High alerts. Critical may be used as a conceptual or future severity and may appear as a UI filter category, but no current rule generates Critical alerts.
 
 Severity should communicate the level of attention an alert may require.
 
@@ -602,7 +601,7 @@ The AI Assistant may help with:
 
 The AI Assistant should support the user's investigation rather than replace the user's judgment.
 
-For the initial MVP, the AI Assistant may use demonstration/mock responses before a real AI service is connected.
+The current implementation uses a server-side Groq integration with the configured production AI model and controlled, authorized QubWatch context. The AI assists authorized human review and analysis; it does not independently accuse users of wrongdoing or decide guilt or innocence. Human users remain responsible for findings and resolutions.
 
 ---
 
@@ -659,7 +658,8 @@ Examples:
 * Search by transaction ID
 * Search by product
 * Filter by transaction type
-* Filter by date
+
+Date filtering is a future enhancement; it is not currently available in the Transactions screen.
 
 ### Alerts
 
@@ -682,12 +682,14 @@ QubWatch should maintain basic records of important user actions.
 Examples:
 
 * Transaction created
-* Alert created
 * Alert reviewed
 * Investigation opened
 * Investigation note added
 * Finding recorded
 * Investigation resolved
+* Investigation closed
+
+Alert creation is not currently recorded as an audit event.
 
 Where appropriate, records should include:
 
@@ -704,39 +706,33 @@ The MVP should recognize basic user roles:
 
 ### Business Owner
 
-Access to business monitoring, products, transactions, alerts, investigations, and settings.
+The highest business-management permissions, including permitted management of business settings, team roles, products, transactions, monitoring rules, alerts, and investigations.
 
 ### Authorized Manager
 
-Access to monitoring and management functions assigned by the owner.
+Role-based operational management permissions within the business, including management of Staff Users. Authorized Managers cannot exercise privileged Business Owner or Administrator control or assign privileged roles.
 
 ### Staff User
 
-Access to functions required for assigned business activities.
+Limited role-based access appropriate to staff activities, including recording transactions under their own account.
 
 ### Administrator
 
-Basic administrative access.
+Review/read-oriented access to permitted business information and AI assistance, without normal business-management write permissions for teams, products, monitoring rules, transaction status, or other management functions.
 
-More detailed role-based permissions may be expanded in later versions.
+Permissions are role-based; the MVP does not provide a granular custom-permission or permission-builder system. Business Owners can assign or manage roles where the application permits it.
 
 ---
 
 # 33A. Team Management (MVP)
 
-The Business Owner and Authorized Manager can view team members in Settings.
+The Business Owner and Authorized Manager can view team members in Settings. Business Owners can assign roles where permitted. Authorized Managers can add and manage Staff Users, but cannot assign privileged roles or manage privileged owner/administrator control.
 
-They can add a user with:
+An added user has a name and one of the four roles defined in Section 33, subject to the role restrictions above. Users' names and roles can be edited only where the current role permissions allow it.
 
-* Name
-* One of the four roles defined in Section 33
-
-They can edit an existing user's name and role.
-
-Added and edited users are saved in browser storage and remain available after page refresh and when the user reopens QubWatch in the same browser and device.
 User references continue to resolve by user ID.
 
-Persistence is provided by a backend API with database storage as the system of record; browser-local storage may remain as an offline cache. Record IDs and data-model concepts from Section 37 are preserved unchanged. This introduces basic authentication (login sessions) for the existing four roles. It does not introduce dedicated offline synchronization, conflict-resolution synchronization, or advanced authentication.
+Team records persist through the backend API and database as the system of record. Local development can use SQLite when `DATABASE_URL` is not configured; production uses Supabase-hosted PostgreSQL through the Render backend's server-side `DATABASE_URL`. The PWA may cache application assets, but browser-local operational-data storage and offline database synchronization are not implemented. Record IDs and data-model concepts from Section 37 are preserved unchanged. This includes basic authentication (login sessions) for the existing four roles, but not advanced authentication.
 
 The MVP does NOT include:
 
@@ -748,7 +744,9 @@ The MVP does NOT include:
 
 # 34. Mobile Application Requirements
 
-The mobile application should provide a simple mobile-first experience for important monitoring activities.
+QubWatch targets web, Android, and iOS. The current responsive web application and installable PWA provide the mobile-responsive UI and navigation foundation and use the shared QubWatch backend/API. Android packaging/APK and iOS packaging/distribution are deployment targets; no native Android or iOS implementation is currently present in the repository.
+
+The mobile experience should provide a simple mobile-first experience for important monitoring activities.
 
 ### Mobile Dashboard
 
@@ -955,20 +953,17 @@ The final technology choice for packaging/developing the installable Android and
 
 ## Stage 6 — Mobile Application
 
-* Mobile interface
-* Mobile navigation
-* Dashboard
-* Alerts
-* Transactions
-* Investigations
-* AI Assistant
-* Mobile testing
+* Responsive mobile web/PWA interface and navigation (implemented)
+* Validate Dashboard, Alerts, Transactions, Investigations, and AI Assistant on mobile
+* Prepare Android packaging/APK for the current assessment
+* Prepare iOS packaging and distribution for the intended product target
+* Mobile platform testing
 
 ## Stage 7 — Testing and Demonstration
 
 * Test complete user journey
 * Test responsive web interface
-* Test mobile application
+* Test the mobile-responsive PWA and the Android/iOS package targets
 * Fix errors
 * Review usability
 * Run production builds
@@ -994,9 +989,10 @@ The QubWatch MVP is ready for demonstration when a user can:
 12. Record a finding.
 13. Resolve the investigation.
 14. View the completed investigation status.
-15. Use the AI Assistant.
+15. Use the AI Assistant for human review and analysis.
 16. Perform the core workflow on a responsive web interface.
-17. Perform the key monitoring workflow on the installable mobile application.
+17. Perform the key monitoring workflow using the installable PWA on mobile.
+18. Prepare the Android APK required for the current assessment; retain iOS packaging and distribution as an intended product target.
 
 The application should build successfully without blocking errors.
 
@@ -1066,21 +1062,21 @@ QubWatch is designed to help business owners see important business activities m
 
 # 44. Full-Stack Implementation and Technical Notes
 
-This section records the implementation state used for the working local prototype. It supplements the product requirements above without replacing the product scope.
+This section records the current implementation state of the deployed full-stack MVP. It supplements the product requirements above without replacing the product scope.
 
 ## 44.1 Current Architecture
 
-QubWatch is implemented as a small full-stack application:
+QubWatch is implemented as a full-stack application:
 
-**React/Vite frontend → Express API → SQLite by default locally or PostgreSQL when configured**
+**React/Vite frontend and installable PWA → Express API → SQLite for local development or Supabase-hosted PostgreSQL in production**
 
-The frontend communicates with backend routes under `/api`. The backend validates writes, applies authentication and role checks, and persists application data in SQLite when `DATABASE_URL` is unset or PostgreSQL when `DATABASE_URL` is configured.
+The production application is deployed on Render. The frontend communicates with the Express API through routes under `/api`; the backend validates writes, applies server-side authentication and role checks, and persists production application data in Supabase-hosted PostgreSQL through the Render backend's server-side `DATABASE_URL`. Local development can use SQLite when `DATABASE_URL` is unset.
 
 ## 44.2 Technology Stack
 
 - **Frontend:** React 19, JavaScript/JSX, Vite
 - **Backend:** Node.js and Express
-- **Database:** SQLite using `better-sqlite3` by default when `DATABASE_URL` is unset; PostgreSQL using `pg` when `DATABASE_URL` is configured
+- **Database:** SQLite using `better-sqlite3` for local development when `DATABASE_URL` is unset; production uses Supabase-hosted PostgreSQL via the Render backend's server-side `DATABASE_URL`
 - **PWA:** `vite-plugin-pwa`
 - **Styling:** CSS
 - **Authentication:** server-side sessions, HttpOnly cookies, scrypt password hashing
@@ -1114,7 +1110,7 @@ Demonstration accounts and business records use non-production test data. Real p
 
 ## 44.5 Implementation Decisions
 
-- SQLite is the default local database when `DATABASE_URL` is not configured. PostgreSQL is used when `DATABASE_URL` is configured and is the supported production database configuration; production PostgreSQL connections require TLS with certificate validation.
+- Production uses Supabase-hosted PostgreSQL through the Render backend's server-side `DATABASE_URL` with TLS enabled, using the application's configured Supabase connection compatibility settings.
 - The MVP uses deterministic, rule-based monitoring rather than advanced machine-learning anomaly detection.
 - Generated alerts are persisted as immutable historical snapshots with stable rule-generated IDs, generation-time evidence, related record IDs, and rule values. Statuses remain in the existing status workflow, and investigations continue to link by alert ID.
 - Successful sales and refunds update product stock atomically with transaction creation; discounts do not move stock, and sales cannot take stock below zero.
@@ -1156,23 +1152,22 @@ Implementation work should follow these constraints:
 
 ## 44.8 Current Phase and Roadmap
 
-The project has progressed from the initial Vite/React foundation through core business functions, monitoring, investigation, AI Assistant work, and full-stack data implementation.
+QubWatch is a deployed full-stack MVP with a React/Vite frontend, Express backend/API, Supabase-hosted PostgreSQL production database, and Render production deployment. Implemented functionality includes server-side authentication/session handling, role-based access control, monitoring and alerting, investigation workflows, server-side Groq AI assistance, a Paystack Test Mode subscription integration, responsive mobile UI, and an installable PWA.
 
 The current roadmap is:
 
-1. Verify the full-stack implementation and error handling.
-2. Verify responsive and installable mobile/PWA behavior.
-3. Test the complete monitoring → alert → investigation → finding → resolution journey.
-4. Prepare and record the prototype demonstration.
-5. Continue with the remaining mobile and final testing work described in Stage 6 and Stage 7.
+1. Validate the deployed full-stack implementation, error handling, and complete monitoring → alert → investigation → finding → resolution journey.
+2. Complete assessment deployment work, including preparing the required Android APK from the existing web/PWA implementation.
+3. Continue iOS packaging and distribution preparation for the intended multi-platform product.
+4. Complete responsive/PWA and mobile-platform validation and prepare the product demonstration.
 
 #### Project Status
 
-**Current Phase Reached:** Initial Working Prototype / Full-Stack MVP Implementation
+**Current Phase Reached:** Deployed Full-Stack MVP / Assessment Deployment and Validation
 
-**Current Status:** QubWatch has reached a working local prototype phase. The actual React/Vite application opens locally in the browser as a working QubWatch interface, separate from the static `design.html` preview. The prototype includes the QubWatch Dashboard and core application pages, uses the local Express API and SQLite by default (or PostgreSQL when `DATABASE_URL` is configured), and uses seeded/mock data for the local demonstration.
+**Current Status:** QubWatch is deployed on Render with a React/Vite frontend, Express backend/API, and production PostgreSQL hosted by Supabase. The application includes server-side authentication and sessions, role-based access control, business/team/product/transaction management, monitoring and alerting, investigations and audit records, server-side Groq AI assistance, and an owner-only Paystack Test Mode subscription integration. The responsive web application, mobile UI, and installable PWA are implemented. Local development can use SQLite when `DATABASE_URL` is not configured; production database connections use Supabase PostgreSQL through the Render backend's server-side `DATABASE_URL`.
 
-**What Comes Next:** Continue the QubWatch MVP implementation roadmap through further testing, refinement, validation, and preparation for the next development/release stage. Future work should remain aligned with the PRD scope.
+**What Comes Next:** Validate the deployed workflows and prepare the Android APK required for the current assessment. Android packaging is deployment work for the existing QubWatch product, not a prerequisite for the core product to exist. Continue iOS packaging/distribution preparation and any remaining platform validation; no native Android or iOS implementation is currently present in the repository.
 
 
 ## 44.9 Design Refinement Note
