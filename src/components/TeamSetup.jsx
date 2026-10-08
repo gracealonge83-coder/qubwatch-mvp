@@ -70,7 +70,6 @@ function TeamSetup({ users, onAdd, onUpdate, newCredentials, onClearCredentials 
   return (
     <div className="card">
       <h2>Team</h2>
-      <p className="muted">PRD roles only. Changes save to the QubWatch backend.</p>
       {newCredentials && (
         <div className="card">
           <p><strong>Login password for {newCredentials.name}:</strong></p>
