@@ -4,6 +4,7 @@ import { formatDateTime, txnDisplayNumber } from '../utils/formatDateTime.js'
 // Stage 2: view + record transactions, search and filtering (PRD Sections 15 + 31).
 // The API persists transactions and applies the corresponding stock movement.
 function Transactions({ transactions, products, users, currentUser, onAdd }) {
+  const isStaff = currentUser?.role === 'Staff User'
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('all')
   const [form, setForm] = useState({
@@ -85,6 +86,9 @@ function Transactions({ transactions, products, users, currentUser, onAdd }) {
               <option value="discount">Discount</option>
             </select>
           </label>
+          {isStaff ? (
+            <p className="muted">Recorded by: {currentUser?.name ?? ''}</p>
+          ) : (
           <label>
             Recorded by
             <select name="staffId" value={form.staffId} onChange={handleChange}>
@@ -93,6 +97,7 @@ function Transactions({ transactions, products, users, currentUser, onAdd }) {
               ))}
             </select>
           </label>
+          )}
           <label>
             Quantity
             <input name="quantity" value={form.quantity} onChange={handleChange} />

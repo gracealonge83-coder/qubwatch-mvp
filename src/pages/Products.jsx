@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 // Stage 2: product viewing, add/edit, search and filtering (PRD Sections 14 + 31).
 // In-memory only. No database.
@@ -12,6 +12,18 @@ function Products({ products, onAdd, onUpdate }) {
   const [form, setForm] = useState(EMPTY_FORM)
   const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
+  // Role comes from the session (this page receives no user prop).
+  // Management UI stays hidden until a non-Staff role is confirmed.
+  const [role, setRole] = useState(null)
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/auth/me', { credentials: 'include' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => { if (!cancelled && data && data.user) setRole(data.user.role) })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [])
+  const showManagement = role !== null && role !== 'Staff User'
 
   const categories = [...new Set(products.map((p) => p.category))]
 
@@ -73,6 +85,7 @@ function Products({ products, onAdd, onUpdate }) {
 
   return (
     <div className="grid">
+      {showManagement && (
       <div className="card">
         <h2>{editingId ? 'Edit product' : 'Add product'}</h2>
         <form onSubmit={handleSubmit} className="form">
@@ -101,6 +114,7 @@ function Products({ products, onAdd, onUpdate }) {
           {notice && <p role="status">{notice}</p>}
         </form>
       </div>
+      )}
 
       <div className="card">
         <h2>Products ({filtered.length})</h2>
@@ -123,28 +137,30 @@ function Products({ products, onAdd, onUpdate }) {
         ) : (
           <div className="table-wrap">
             <table>
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Category</th>
-                  <th>Price</th>
-                  <th>Stock</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((p) => (
-                  <tr key={p.id}>
-                    <td>{p.name}</td>
-                    <td>{p.category}</td>
-                    <td>₦{p.price.toLocaleString()}</td>
-                    <td>{p.stock}{p.stock !== p.expectedStock ? ' *' : ''}</td>
-                    <td>
-                      <button className="secondary-btn" onClick={() => startEdit(p)}>Edit</button>
-                    </td>
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Category</th>
+                    <th>Price</th>
+                    <th>Stock</th>
+                    {showManagement && <th></th>}
                   </tr>
-                ))}
-              </tbody>
+                </thead>
+                <tbody>
+                  {filtered.map((p) => (
+                    <tr key={p.id}>
+                      <td>{p.name}</td>
+                      <td>{p.category}</td>
+                      <td>₦{p.price.toLocaleString()}</td>
+                      <td>{p.stock}{p.stock !== p.expectedStock ? ' *' : ''}</td>
+                      {showManagement && (
+                      <td>
+                        <button className="secondary-btn" onClick={() => startEdit(p)}>Edit</button>
+                      </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
             </table>
           </div>
         )}

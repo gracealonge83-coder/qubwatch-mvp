@@ -21,7 +21,6 @@ function BusinessSetup({ business, onSave }) {
   return (
     <div className="card">
       <h2>Business Setup</h2>
-      <p className="muted">Simple setup form for Stage 1. Changes save to the QubWatch backend.</p>
       <form onSubmit={handleSubmit} className="form">
         <label>
           Business name

@@ -10,10 +10,17 @@ const TABS = [
   { label: 'AI Assistant', icon: 'ai' },
 ]
 
-function MobileNav({ currentPage, onNavigate, openAlertCount }) {
+const STAFF_TABS = [
+  { label: 'Dashboard', icon: 'dashboard' },
+  { label: 'Products', icon: 'products' },
+  { label: 'Transactions', icon: 'transactions' },
+]
+
+function MobileNav({ currentPage, onNavigate, openAlertCount, userRole }) {
+  const tabs = userRole === 'Staff User' ? STAFF_TABS : TABS
   return (
     <nav className="mobile-nav" aria-label="Mobile navigation">
-      {TABS.map((item) => (
+      {tabs.map((item) => (
         <button
           key={item.label}
           className={item.label === currentPage ? 'tab-btn active' : 'tab-btn'}

@@ -25,6 +25,10 @@ const PAGE_DESCRIPTIONS = {
 }
 
 function Layout({ currentPage, onNavigate, businessName, notificationCount, onOpenNotifications, user, onLogout, children }) {
+  const isStaff = user?.role === 'Staff User'
+  const navItems = isStaff
+    ? NAV_ITEMS.filter((item) => ['Dashboard', 'Products', 'Transactions'].includes(item.label))
+    : NAV_ITEMS
   return (
     <div className="app shell">
       <aside className="sidebar">
@@ -37,7 +41,7 @@ function Layout({ currentPage, onNavigate, businessName, notificationCount, onOp
         </div>
 
         <nav className="side-nav" aria-label="Main navigation">
-          {NAV_ITEMS.map((item) => (
+          {navItems.map((item) => (
             <button
               key={item.label}
               className={item.label === currentPage ? 'side-nav-btn active' : 'side-nav-btn'}
@@ -66,7 +70,6 @@ function Layout({ currentPage, onNavigate, businessName, notificationCount, onOp
       <div className="shell-main">
         <header className="topbar">
           <div className="topbar-heading">
-            <span className="topbar-kicker">BUSINESS MONITORING & INVESTIGATION</span>
             <h2>{currentPage}</h2>
             <p>{PAGE_DESCRIPTIONS[currentPage] || 'Business monitoring and investigation workspace.'}</p>
           </div>
@@ -100,6 +103,7 @@ function Layout({ currentPage, onNavigate, businessName, notificationCount, onOp
         currentPage={currentPage}
         onNavigate={onNavigate}
         openAlertCount={notificationCount}
+        userRole={user?.role}
       />
     </div>
   )

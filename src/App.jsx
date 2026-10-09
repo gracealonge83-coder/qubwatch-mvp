@@ -296,8 +296,16 @@ function App() {
     (i) => i.status === 'Open' || i.status === 'Under Investigation',
   ).length
 
+  // Staff experience covers Dashboard, Products and Transactions only.
+  // Any other page request renders the Dashboard instead, so restricted
+  // content is never shown (no flash, no redirect needed). Owner/Manager
+  // flow is unchanged: effectivePage always equals page for other roles.
+  const isStaff = currentUser?.role === 'Staff User'
+  const STAFF_PAGES = ['Dashboard', 'Products', 'Transactions']
+  const effectivePage = isStaff && !STAFF_PAGES.includes(page) ? 'Dashboard' : page
+
   let content = null
-  if (page === 'Dashboard') {
+  if (effectivePage === 'Dashboard') {
     content = (
       <Dashboard
         business={biz}
@@ -311,7 +319,7 @@ function App() {
         onReviewAlert={openAlert}
       />
     )
-  } else if (page === 'Settings') {
+  } else if (effectivePage === 'Settings') {
     content = (
       <Settings
         business={biz}
@@ -328,9 +336,9 @@ function App() {
         currentUser={currentUser}
       />
     )
-  } else if (page === 'Products') {
+  } else if (effectivePage === 'Products') {
     content = <Products products={productList} onAdd={addProduct} onUpdate={updateProduct} />
-  } else if (page === 'Transactions') {
+  } else if (effectivePage === 'Transactions') {
     content = (
       <Transactions
         transactions={txnList}
@@ -340,7 +348,7 @@ function App() {
         onAdd={addTransaction}
       />
     )
-  } else if (page === 'Alerts') {
+  } else if (effectivePage === 'Alerts') {
     content = (
       <Alerts
         alerts={alerts}
@@ -356,7 +364,7 @@ function App() {
         onAskAiAboutAlert={askAiAboutAlert}
       />
     )
-  } else if (page === 'Investigations') {
+  } else if (effectivePage === 'Investigations') {
     content = (
       <Investigations
         investigations={investigations}
@@ -377,7 +385,7 @@ function App() {
         auditLog={auditLog}
       />
     )
-  } else if (page === 'AI Assistant') {
+  } else if (effectivePage === 'AI Assistant') {
     content = (
       <AiAssistant
         key={`${aiContext.type}-${aiContext.id || 'none'}`}
@@ -393,7 +401,7 @@ function App() {
         onOpenInvestigation={openInvestigation}
       />
     )
-  } else if (page === 'Notifications') {
+  } else if (effectivePage === 'Notifications') {
     content = (
       <Notifications
         alerts={alerts}
@@ -443,7 +451,7 @@ function App() {
 
   return (
     <Layout
-      currentPage={page}
+      currentPage={effectivePage}
       onNavigate={setPage}
       businessName={biz.name}
       notificationCount={alerts.filter((a) => a.status === 'New' || a.status === 'Under Review').length}

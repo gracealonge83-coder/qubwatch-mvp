@@ -22,6 +22,80 @@ function Dashboard({ business, user, users, products, transactions, alerts, open
   const daypart = hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening'
   const firstName = user.name.split(' ')[0]
 
+  // Staff see only their own activity (the API already scopes transactions
+  // to the logged-in staff user) without monitoring or management sections.
+  if (user?.role === 'Staff User') {
+    return (
+      <div>
+        <div className="dash-top">
+          <div>
+            <h1>Good {daypart}, {firstName}</h1>
+            <div className="muted">{business.name} · {user.role} · Monitoring overview</div>
+          </div>
+          <div className="user-card">
+            <div>{user.role}</div>
+            <div><strong>{user.name}</strong></div>
+          </div>
+        </div>
+
+        <div className="kpi-grid">
+          <div className="card kpi kpi-sales">
+            <div className="kpi-heading"><span className="kpi-icon"><Icon name="sales" /></span><div className="metric-label">Recorded sales</div></div>
+            <div className="metric">₦{salesTotal.toLocaleString()}</div>
+            <p className="muted">{sales.length} sales</p>
+          </div>
+          <div className="card kpi kpi-refunds">
+            <div className="kpi-heading"><span className="kpi-icon"><Icon name="refund" /></span><div className="metric-label">Recorded refunds</div></div>
+            <div className="metric">₦{refundTotal.toLocaleString()}</div>
+            <p className="muted">{refunds.length} refunds</p>
+          </div>
+          <div className="card kpi kpi-discounts">
+            <div className="kpi-heading"><span className="kpi-icon"><Icon name="discount" /></span><div className="metric-label">Recorded discounts</div></div>
+            <div className="metric">₦{discountTotal.toLocaleString()}</div>
+            <p className="muted">{discounts.length} discounted</p>
+          </div>
+        </div>
+
+        <div className="grid" style={{ marginTop: '18px' }}>
+          <div className="card">
+            <div className="section-title">My recent activity</div>
+            {recent.length === 0 ? (
+              <p className="muted">No recent activity yet.</p>
+            ) : (
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr><th>Date</th><th>Product</th><th>Type</th><th>Amount</th><th>User</th></tr>
+                </thead>
+                <tbody>
+                  {recent.map((t) => (
+                    <tr key={t.id}>
+                      <td>{formatDateTime(t.date)}</td>
+                      <td>{productById[t.productId] ? productById[t.productId].name : t.productId}</td>
+                      <td>{t.type}</td>
+                      <td>₦{t.amount.toLocaleString()}</td>
+                      <td>{userById[t.staffId] ? userById[t.staffId].name : t.staffId}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            )}
+          </div>
+
+          <div className="card">
+            <div className="section-title">Record activity</div>
+            <p className="muted">Record a sale, refund or discount, or review your recent activity.</p>
+            <div className="form-row">
+              <button className="secondary-btn" onClick={() => onNavigate('Transactions')}>Record transaction</button>
+              <button className="secondary-btn" onClick={() => onNavigate('Products')}>View products</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div>
       <div className="dash-top">
