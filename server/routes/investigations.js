@@ -131,8 +131,8 @@ router.post('/investigations', requireRole(...MANAGERS), async (req, res) => {
           alert.type,
           alert.severity,
           req.user.id,
-          alert.relatedTransactionIds,
-          alert.relatedProductIds,
+          JSON.stringify(alert.relatedTransactionIds),
+          JSON.stringify(alert.relatedProductIds),
           date,
         ],
       )
@@ -202,7 +202,7 @@ router.post('/investigations/:id/notes', requireRole(...MANAGERS), async (req, r
     await withTransaction(async (t) => {
       const next = [...inv.notes, note]
       await t.query('UPDATE investigations SET notes = $1, status = $2 WHERE id = $3', [
-        next,
+        JSON.stringify(next),
         inv.status === 'Open' ? 'Under Investigation' : inv.status,
         inv.id,
       ])
