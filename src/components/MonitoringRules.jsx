@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { DEMO_THRESHOLDS } from '../../shared/rules.js'
 
 // Monitoring Rules editor (PRD Section 16, Configurable Rules).
-// Business Owner and Authorized Manager can edit; Staff users cannot.
+// Only the Business Owner can edit; all other roles have a read-only view.
 // Inventory Discrepancy is not configurable. In-memory + localStorage only.
 const FIELDS = [
   { key: 'LARGE_TRANSACTION_AMOUNT', label: 'Large transaction amount (₦)', hint: 'Flag sales above this amount.' },
@@ -101,7 +101,7 @@ function MonitoringRules({ config, canEdit, onSave, onRestore }) {
       <p className="muted">
         {canEdit
           ? 'Changes apply immediately to all stored transactions.'
-          : 'Only the Business Owner or an Authorized Manager can change these rules.'}
+          : 'Only the Business Owner can change these rules.'}
       </p>
       <form onSubmit={handleSave} className="form">
         {FIELDS.map((f) => (

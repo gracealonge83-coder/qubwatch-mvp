@@ -147,9 +147,7 @@ function App() {
     setPage('Alerts')
   }
 
-  const canEditRules = !!currentUser && (
-    currentUser.role === 'Business Owner' || currentUser.role === 'Authorized Manager'
-  )
+  const canEditRules = !!currentUser && currentUser.role === 'Business Owner'
 
   async function saveBusiness(data) {
     const res = await api.patch('/business', data)
@@ -296,13 +294,13 @@ function App() {
     (i) => i.status === 'Open' || i.status === 'Under Investigation',
   ).length
 
-  // Staff experience covers Dashboard, Products and Transactions only.
-  // Any other page request renders the Dashboard instead, so restricted
-  // content is never shown (no flash, no redirect needed). Owner/Manager
-  // flow is unchanged: effectivePage always equals page for other roles.
+  // Restricted page requests resolve before rendering so protected content
+  // is never shown, even when a page is requested programmatically.
   const isStaff = currentUser?.role === 'Staff User'
   const STAFF_PAGES = ['Dashboard', 'Products', 'Transactions']
-  const effectivePage = isStaff && !STAFF_PAGES.includes(page) ? 'Dashboard' : page
+  const effectivePage = page === 'Business Setup'
+    ? (currentUser?.role === 'Business Owner' ? 'Settings' : 'Dashboard')
+    : isStaff && !STAFF_PAGES.includes(page) ? 'Dashboard' : page
 
   let content = null
   if (effectivePage === 'Dashboard') {

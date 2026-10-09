@@ -173,7 +173,7 @@ function SubscriptionSettings() {
 function Settings({ business, onSaveBusiness, users, onAddUser, onUpdateUser, ruleConfig, canEditRules, onSaveRules, onRestoreRules, newCredentials, onClearCredentials, currentUser }) {
   return (
     <div className="grid">
-      <BusinessSetup business={business} onSave={onSaveBusiness} />
+      {currentUser && currentUser.role === 'Business Owner' && <BusinessSetup business={business} onSave={onSaveBusiness} />}
       <TeamSetup users={users} onAdd={onAddUser} onUpdate={onUpdateUser} newCredentials={newCredentials} onClearCredentials={onClearCredentials} />
       <MonitoringRules config={ruleConfig} canEdit={canEditRules} onSave={onSaveRules} onRestore={onRestoreRules} />
       {currentUser && currentUser.role === 'Business Owner' && <SubscriptionSettings />}

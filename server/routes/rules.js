@@ -4,8 +4,6 @@ import { requireAuth, requireRole } from '../auth.js'
 import { validateRuleConfig, badRequest } from '../validate.js'
 import { DEMO_THRESHOLDS } from '../../shared/rules.js'
 
-const MANAGERS = ['Business Owner', 'Authorized Manager']
-
 function mapRules(row) {
   const source = row || {}
   const defaults = DEMO_THRESHOLDS
@@ -31,7 +29,7 @@ router.get('/rules', async (req, res) => {
   res.json(mapRules(row))
 })
 
-router.put('/rules', requireRole(...MANAGERS), async (req, res) => {
+router.put('/rules', requireRole('Business Owner'), async (req, res) => {
   const errors = validateRuleConfig(req.body)
   if (errors) {
     badRequest(res, errors)

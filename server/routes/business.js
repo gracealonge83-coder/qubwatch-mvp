@@ -3,8 +3,6 @@ import { getDb, query, PG_MODE } from '../db.js'
 import { requireAuth, requireRole } from '../auth.js'
 import { requiredText, badRequest } from '../validate.js'
 
-const MANAGERS = ['Business Owner', 'Authorized Manager']
-
 function mapBusiness(row) {
   if (!row) return null
   return {
@@ -32,7 +30,7 @@ router.get('/business', async (req, res) => {
   res.json(mapBusiness(row))
 })
 
-router.patch('/business', requireRole(...MANAGERS), async (req, res) => {
+router.patch('/business', requireRole('Business Owner'), async (req, res) => {
   const body = req.body || {}
   const allowed = ['name', 'type', 'location', 'owner', 'contact', 'hours']
   const updates = {}
