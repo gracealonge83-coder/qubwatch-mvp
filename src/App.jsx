@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import Layout from './components/Layout.jsx'
 import Login from './pages/Login.jsx'
+import Register from './pages/Register.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import Settings from './pages/Settings.jsx'
 import Products from './pages/Products.jsx'
@@ -41,6 +42,7 @@ function App() {
   const [aiContext, setAiContext] = useState({ type: 'overview', id: null })
   const [apiError, setApiError] = useState(null)
   const [newUserCredentials, setNewUserCredentials] = useState(null)
+  const [authMode, setAuthMode] = useState('login')
   const currentUser = session.user
 
   // Loads every slice from the API after login. Returns true on success.
@@ -114,6 +116,17 @@ function App() {
     return ok ? null : 'Logged in, but data failed to load. Please try again.'
   }
 
+  // Customer sign-up: creates the business and owner, then signs in and
+  // loads the fresh workspace. Returns null on success, else { message, fields }.
+  async function register(data) {
+    setApiError(null)
+    const res = await api.post('/auth/register', data)
+    if (!res.ok) return { message: res.error, fields: res.fields }
+    setSession({ status: 'ready', user: res.data.user })
+    const ok = await refreshAll()
+    return ok ? null : { message: 'Account created, but data failed to load. Please log in.', fields: null }
+  }
+
   async function logout() {
     await api.post('/auth/logout')
     setSession({ status: 'ready', user: null })
@@ -130,6 +143,7 @@ function App() {
     setApiError(null)
     setNewUserCredentials(null)
     setPage('Dashboard')
+    setAuthMode('login')
   }
 
   async function refreshAudit() {
@@ -421,7 +435,9 @@ function App() {
   }
 
   if (!session.user) {
-    return <Login onLogin={login} />
+    return authMode === 'register'
+      ? <Register onRegister={register} onShowLogin={() => setAuthMode('login')} />
+      : <Login onLogin={login} onShowRegister={() => setAuthMode('register')} />
   }
 
   // Data must be present before any page renders: pages read business.name

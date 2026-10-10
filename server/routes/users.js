@@ -1,6 +1,6 @@
 import crypto from 'node:crypto'
 import { Router } from 'express'
-import { getDb, query, PG_MODE } from '../db.js'
+import { getDb, query, isUniqueViolation, PG_MODE } from '../db.js'
 import { requireAuth, requireRole } from '../auth.js'
 import { ROLES, requiredText, inList, badRequest, collect } from '../validate.js'
 import { newId } from '../ids.js'
@@ -13,7 +13,8 @@ function mapUser(row) {
   return { id: row.id, name: row.name, role: row.role, businessId: row.business_id }
 }
 
-function hashPassword(password) {
+// Shared with the public registration route (same scrypt convention).
+export function hashPassword(password) {
   const salt = crypto.randomBytes(16).toString('hex')
   const key = crypto.scryptSync(String(password), Buffer.from(salt, 'hex'), 64, {
     N: 16384,
@@ -59,22 +60,42 @@ router.post('/users', requireRole(...MANAGERS), async (req, res) => {
     res.status(500).json({ error: 'No business is set up yet' })
     return
   }
+  // Login identifiers are global, so team names must also be unique across
+  // all accounts. The unique index enforces this atomically; both the
+  // pre-check and the violation mapping return a controlled 409.
+  const nameTaken = PG_MODE
+    ? (await query('SELECT id FROM users WHERE name = $1', [body.name.trim()])).rows[0]
+    : db.prepare('SELECT id FROM users WHERE name = ?').get(body.name.trim())
+  if (nameTaken) {
+    res.status(409).json({ error: 'That user name is already taken.' })
+    return
+  }
   // Temporary credential: generated here, hashed immediately, returned once
   // in this response only. Never stored, logged, or audited as plaintext.
   const temporaryPassword = crypto.randomBytes(12).toString('base64url')
   const id = newId('user')
-  if (PG_MODE) {
-    const { rows } = await query(
-      'INSERT INTO users (id, name, role, business_id, password_hash) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [id, body.name.trim(), body.role, business.id, hashPassword(temporaryPassword)],
-    )
-    res.status(201).json({ user: mapUser(rows[0]), temporaryPassword })
-    return
+  try {
+    if (PG_MODE) {
+      const { rows } = await query(
+        'INSERT INTO users (id, name, role, business_id, password_hash) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+        [id, body.name.trim(), body.role, business.id, hashPassword(temporaryPassword)],
+      )
+      res.status(201).json({ user: mapUser(rows[0]), temporaryPassword })
+      return
+    }
+    db.prepare(
+      'INSERT INTO users (id, name, role, business_id, password_hash) VALUES (?, ?, ?, ?, ?)',
+    ).run(id, body.name.trim(), body.role, business.id, hashPassword(temporaryPassword))
+  } catch (err) {
+    if (isUniqueViolation(err)) {
+      res.status(409).json({ error: 'That user name is already taken.' })
+      return
+    }
+    throw err
   }
-  db.prepare(
-    'INSERT INTO users (id, name, role, business_id, password_hash) VALUES (?, ?, ?, ?, ?)',
-  ).run(id, body.name.trim(), body.role, business.id, hashPassword(temporaryPassword))
-  const created = db.prepare('SELECT * FROM users WHERE id = ?').get(id)
+  const created = PG_MODE
+    ? (await query('SELECT * FROM users WHERE id = $1', [id])).rows[0]
+    : db.prepare('SELECT * FROM users WHERE id = ?').get(id)
   res.status(201).json({ user: mapUser(created), temporaryPassword })
 })
 

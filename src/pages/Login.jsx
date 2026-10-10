@@ -2,7 +2,7 @@ import { useState } from 'react'
 
 // Minimal QubWatch login screen (Stage 6). Uses the Stage 4 session API;
 // the session cookie is HttpOnly and never visible to this code.
-function Login({ onLogin }) {
+function Login({ onLogin, onShowRegister }) {
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -48,6 +48,11 @@ function Login({ onLogin }) {
             <button type="submit" className="primary-btn" disabled={busy}>
               {busy ? 'Logging in…' : 'Log in'}
             </button>
+            {onShowRegister && (
+              <button type="button" className="secondary-btn" onClick={onShowRegister} disabled={busy}>
+                New to QubWatch? Create an account
+              </button>
+            )}
           </form>
         </div>
       </main>

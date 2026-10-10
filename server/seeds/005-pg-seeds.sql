@@ -13,13 +13,13 @@ INSERT INTO users (id, name, role, business_id, password_hash) VALUES
   ('user-staff', 'Chiamaka Eze', 'Staff User', 'biz-001', 'scrypt$16384$8$1$6b8221657332f69129b21e559ac75b4c$1e2dabf7b4437a583e9d6c7f39b8b25add7c976c180f4ca461ed37e4200e270002c37ff3aab71cecfb37cb81f61dd5223fdf8a4392aa1b1cad6bf889bd67f876')
 ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO products (id, name, category, price, stock, expected_stock) VALUES
-  ('prod-rice', 'Rice', 'Grains', 85000, 42, 42),
-  ('prod-oil', 'Cooking Oil', 'Grocery', 12000, 60, 60),
-  ('prod-milk', 'Milk', 'Dairy', 3500, 80, 80),
-  ('prod-bread', 'Bread', 'Bakery', 1500, 50, 48),
-  ('prod-sugar', 'Sugar', 'Grocery', 5000, 70, 70),
-  ('prod-detergent', 'Detergent', 'Household', 6500, 55, 55)
+INSERT INTO products (id, name, category, price, stock, expected_stock, business_id) VALUES
+  ('prod-rice', 'Rice', 'Grains', 85000, 42, 42, 'biz-001'),
+  ('prod-oil', 'Cooking Oil', 'Grocery', 12000, 60, 60, 'biz-001'),
+  ('prod-milk', 'Milk', 'Dairy', 3500, 80, 80, 'biz-001'),
+  ('prod-bread', 'Bread', 'Bakery', 1500, 50, 48, 'biz-001'),
+  ('prod-sugar', 'Sugar', 'Grocery', 5000, 70, 70, 'biz-001'),
+  ('prod-detergent', 'Detergent', 'Household', 6500, 55, 55, 'biz-001')
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO transactions (id, date, type, product_id, quantity, amount, staff_id, discount) VALUES
@@ -37,6 +37,6 @@ INSERT INTO transactions (id, date, type, product_id, quantity, amount, staff_id
   ('txn-012', '2026-09-19 12:05', 'sale', 'prod-milk', 6, 21000, 'user-staff', 0)
 ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO rule_config (id, large_amount, refund_count, refund_window_minutes, discount_pct, freq_count, freq_window_minutes) VALUES
-  (1, 500000, 3, 120, 20, 5, 60)
-ON CONFLICT (id) DO NOTHING;
+INSERT INTO business_rule_config (business_id, large_amount, refund_count, refund_window_minutes, discount_pct, freq_count, freq_window_minutes) VALUES
+  ('biz-001', 500000, 3, 120, 20, 5, 60)
+ON CONFLICT (business_id) DO NOTHING;

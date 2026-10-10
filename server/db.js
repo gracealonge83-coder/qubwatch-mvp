@@ -10,6 +10,8 @@ import tls from 'node:tls'
 //   or data/qubwatch.sqlite. Existing routes keep using getDb().
 // - PostgreSQL mode: DATABASE_URL locally, or NETLIFY_DB_URL on Netlify.
 //   SQLite migrations 001-003 are skipped; PostgreSQL migrations 004+ run.
+// - Stage 1 clean-start: demo seed data is NEVER applied automatically.
+//   Seed SQL lives in server/seeds/ and only runs via `npm run demo:seed`.
 const IS_NETLIFY = process.env.NETLIFY === 'true'
 const DATABASE_URL = IS_NETLIFY
   ? process.env.NETLIFY_DB_URL || process.env.DATABASE_URL
@@ -26,7 +28,12 @@ const MIGRATIONS_DIR = path.join(process.cwd(), 'server', 'migrations')
 // SQLite 001-003 predate PostgreSQL support and contain SQLite-only dialect.
 // Migration 006 uses a portable subset and applies in both modes.
 const LEGACY_SQLITE_MIGRATION = /^(001|002|003)-/
-const SHARED_MIGRATION = /^006-|^007-|^008-/
+const SHARED_MIGRATION = /^006-|^007-|^008-|^009-|^010-/
+// Demo seed files (002-seed, 003-seed-passwords, 005-pg-seeds) now live in
+// server/seeds/ for the explicit `npm run demo:seed` command. This guard
+// keeps server startup seed-free in every environment — no flag or setting
+// can re-enable seeding here, including production.
+const SEED_MIGRATION = /^(002-seed\.sql|003-seed-passwords\.sql|005-pg-seeds\.sql)$/
 const MIGRATION_LOCK_ID = '718462993401'
 
 let sqliteDb = null
@@ -128,6 +135,14 @@ export async function query(text, params) {
   return getPool().query(text, params)
 }
 
+// True when err is a unique-constraint violation in either driver:
+// PostgreSQL 23505 or better-sqlite3 SQLITE_CONSTRAINT_UNIQUE. Used to map
+// concurrent duplicate-name races to a controlled 409 instead of a 500.
+export function isUniqueViolation(err) {
+  const code = err && err.code
+  return code === '23505' || code === 'SQLITE_CONSTRAINT_UNIQUE'
+}
+
 // Runs fn inside a single PostgreSQL transaction. fn receives a minimal
 // client surface ({ query }) bound to the transaction's connection.
 export async function withTransaction(fn) {
@@ -172,6 +187,7 @@ function migrationFiles() {
     .readdirSync(MIGRATIONS_DIR)
     .filter((f) => f.endsWith('.sql'))
     .sort()
+    .filter((f) => !SEED_MIGRATION.test(f))
     .filter((f) => (PG_MODE
       ? !LEGACY_SQLITE_MIGRATION.test(f)
       : LEGACY_SQLITE_MIGRATION.test(f) || SHARED_MIGRATION.test(f)))

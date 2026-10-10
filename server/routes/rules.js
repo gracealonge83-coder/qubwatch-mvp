@@ -22,10 +22,45 @@ function mapRules(row) {
 const router = Router()
 router.use(requireAuth)
 
+// Business identity always comes from the authenticated session
+// (req.user.businessId). No client-supplied business_id is read anywhere
+// in this router, so requests cannot address another business's rules.
+const RULE_COLUMNS = `business_id, large_amount, refund_count, refund_window_minutes,
+  discount_pct, freq_count, freq_window_minutes`
+
+// Returns the caller's business row, inserting the shared defaults only
+// when the business has no row yet. Existing customized values are never
+// overwritten here.
+async function ensureRuleConfig(db, businessId) {
+  const d = DEMO_THRESHOLDS
+  const values = [
+    businessId,
+    d.LARGE_TRANSACTION_AMOUNT,
+    d.REPEATED_REFUNDS_COUNT,
+    d.REPEATED_REFUNDS_WINDOW_MINUTES,
+    d.EXCESSIVE_DISCOUNT_PCT,
+    d.FREQUENCY_COUNT,
+    d.FREQUENCY_WINDOW_MINUTES,
+  ]
+  if (PG_MODE) {
+    await query(
+      `INSERT INTO business_rule_config (${RULE_COLUMNS})
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       ON CONFLICT (business_id) DO NOTHING`,
+      values,
+    )
+    return (await query('SELECT * FROM business_rule_config WHERE business_id = $1', [businessId])).rows[0]
+  }
+  db.prepare(
+    `INSERT INTO business_rule_config (${RULE_COLUMNS})
+     VALUES (?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT (business_id) DO NOTHING`,
+  ).run(...values)
+  return db.prepare('SELECT * FROM business_rule_config WHERE business_id = ?').get(businessId)
+}
+
 router.get('/rules', async (req, res) => {
-  const row = PG_MODE
-    ? (await query('SELECT * FROM rule_config WHERE id = 1')).rows[0]
-    : getDb().prepare('SELECT * FROM rule_config WHERE id = 1').get()
+  const row = await ensureRuleConfig(PG_MODE ? null : getDb(), req.user.businessId)
   res.json(mapRules(row))
 })
 
@@ -35,35 +70,32 @@ router.put('/rules', requireRole('Business Owner'), async (req, res) => {
     badRequest(res, errors)
     return
   }
-  if (PG_MODE) {
-    const { rows } = await query(
-      `UPDATE rule_config SET large_amount = $1, refund_count = $2, refund_window_minutes = $3,
-       discount_pct = $4, freq_count = $5, freq_window_minutes = $6 WHERE id = 1 RETURNING *`,
-      [
-        req.body.LARGE_TRANSACTION_AMOUNT,
-        req.body.REPEATED_REFUNDS_COUNT,
-        req.body.REPEATED_REFUNDS_WINDOW_MINUTES,
-        req.body.EXCESSIVE_DISCOUNT_PCT,
-        req.body.FREQUENCY_COUNT,
-        req.body.FREQUENCY_WINDOW_MINUTES,
-      ],
-    )
-    res.json(mapRules(rows[0]))
-    return
-  }
-  const db = getDb()
-  db.prepare(
-    `UPDATE rule_config SET large_amount = ?, refund_count = ?, refund_window_minutes = ?,
-     discount_pct = ?, freq_count = ?, freq_window_minutes = ? WHERE id = 1`,
-  ).run(
+  const values = [
+    req.user.businessId,
     req.body.LARGE_TRANSACTION_AMOUNT,
     req.body.REPEATED_REFUNDS_COUNT,
     req.body.REPEATED_REFUNDS_WINDOW_MINUTES,
     req.body.EXCESSIVE_DISCOUNT_PCT,
     req.body.FREQUENCY_COUNT,
     req.body.FREQUENCY_WINDOW_MINUTES,
-  )
-  res.json(mapRules(db.prepare('SELECT * FROM rule_config WHERE id = 1').get()))
+  ]
+  const upsert = (placeholders) => `INSERT INTO business_rule_config (${RULE_COLUMNS})
+    VALUES (${placeholders})
+    ON CONFLICT (business_id) DO UPDATE SET
+      large_amount = excluded.large_amount,
+      refund_count = excluded.refund_count,
+      refund_window_minutes = excluded.refund_window_minutes,
+      discount_pct = excluded.discount_pct,
+      freq_count = excluded.freq_count,
+      freq_window_minutes = excluded.freq_window_minutes`
+  if (PG_MODE) {
+    const { rows } = await query(`${upsert('$1, $2, $3, $4, $5, $6, $7')} RETURNING *`, values)
+    res.json(mapRules(rows[0]))
+    return
+  }
+  const db = getDb()
+  db.prepare(upsert('?, ?, ?, ?, ?, ?, ?')).run(...values)
+  res.json(mapRules(db.prepare('SELECT * FROM business_rule_config WHERE business_id = ?').get(req.user.businessId)))
 })
 
 export default router

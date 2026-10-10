@@ -69,10 +69,10 @@ function mapSnapshot(row) {
   }
 }
 
-async function loadThresholds(db) {
+async function loadThresholds(db, businessId) {
   const row = PG_MODE
-    ? (await query('SELECT * FROM rule_config WHERE id = $1', [1])).rows[0]
-    : db.prepare('SELECT * FROM rule_config WHERE id = 1').get()
+    ? (await query('SELECT * FROM business_rule_config WHERE business_id = $1', [businessId])).rows[0]
+    : db.prepare('SELECT * FROM business_rule_config WHERE business_id = ?').get(businessId)
   const source = row || {}
   const defaults = DEMO_THRESHOLDS
   return {
@@ -110,7 +110,7 @@ export async function deriveAlerts(db, businessId, { persistSnapshots = true } =
        WHERE p.business_id = ? AND u.business_id = ?
        ORDER BY t.rowid`,
     ).all(businessId, businessId, businessId, businessId).map(mapTransaction)
-  const generated = evaluateRules(products, transactions, await loadThresholds(db))
+  const generated = evaluateRules(products, transactions, await loadThresholds(db, businessId))
   const productById = Object.fromEntries(products.map((p) => [p.id, p]))
   const transactionById = Object.fromEntries(transactions.map((t) => [t.id, t]))
 

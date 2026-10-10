@@ -12,13 +12,13 @@ INSERT OR IGNORE INTO users (id, name, role, business_id, password_hash) VALUES
   ('user-manager', 'Tunde Bello', 'Authorized Manager', 'biz-001', 'scrypt$16384$8$1$de0a6e058e274ee16b9b1c1cfa09a35f$d68748be35af3b8ec9f13082ef251f31315f50996a835463bdcd00a9fda0485a8fe33e07c32a2925778392ff6b2e01d5a6ee3f66d5378503fe616c78916aeea1'),
   ('user-staff', 'Chiamaka Eze', 'Staff User', 'biz-001', 'scrypt$16384$8$1$e90b7ea77f96a6c07adda3e3b61f5a7f$e887880faa6d8c1aad8f0045d0a0d46bd62c9c4c36bd41ad5d59db57f7a304de136b4d78b61919c559296924eb94b0a9abe99277c60b7647f7d94544a4274215');
 
-INSERT OR IGNORE INTO products (id, name, category, price, stock, expected_stock) VALUES
-  ('prod-rice', 'Rice', 'Grains', 85000, 42, 42),
-  ('prod-oil', 'Cooking Oil', 'Grocery', 12000, 60, 60),
-  ('prod-milk', 'Milk', 'Dairy', 3500, 80, 80),
-  ('prod-bread', 'Bread', 'Bakery', 1500, 50, 48),
-  ('prod-sugar', 'Sugar', 'Grocery', 5000, 70, 70),
-  ('prod-detergent', 'Detergent', 'Household', 6500, 55, 55);
+INSERT OR IGNORE INTO products (id, name, category, price, stock, expected_stock, business_id) VALUES
+  ('prod-rice', 'Rice', 'Grains', 85000, 42, 42, 'biz-001'),
+  ('prod-oil', 'Cooking Oil', 'Grocery', 12000, 60, 60, 'biz-001'),
+  ('prod-milk', 'Milk', 'Dairy', 3500, 80, 80, 'biz-001'),
+  ('prod-bread', 'Bread', 'Bakery', 1500, 50, 48, 'biz-001'),
+  ('prod-sugar', 'Sugar', 'Grocery', 5000, 70, 70, 'biz-001'),
+  ('prod-detergent', 'Detergent', 'Household', 6500, 55, 55, 'biz-001');
 
 INSERT OR IGNORE INTO transactions (id, date, type, product_id, quantity, amount, staff_id, discount) VALUES
   ('txn-001', '2026-09-18 09:12', 'sale', 'prod-bread', 2, 3000, 'user-staff', 0),
@@ -34,5 +34,5 @@ INSERT OR IGNORE INTO transactions (id, date, type, product_id, quantity, amount
   ('txn-011', '2026-09-19 11:25', 'discount', 'prod-sugar', 4, 16000, 'user-manager', 20),
   ('txn-012', '2026-09-19 12:05', 'sale', 'prod-milk', 6, 21000, 'user-staff', 0);
 
-INSERT OR IGNORE INTO rule_config (id, large_amount, refund_count, refund_window_minutes, discount_pct, freq_count, freq_window_minutes) VALUES
-  (1, 500000, 3, 120, 20, 5, 60);
+INSERT OR IGNORE INTO business_rule_config (business_id, large_amount, refund_count, refund_window_minutes, discount_pct, freq_count, freq_window_minutes) VALUES
+  ('biz-001', 500000, 3, 120, 20, 5, 60);

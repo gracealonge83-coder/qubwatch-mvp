@@ -230,6 +230,32 @@ For local demonstration runs, the app can open directly to the dashboard using t
 
 Then open `https://localhost:5173/`. Do not enable the demo login in production or commit local environment files or credentials.
 
+## Demo data seeding (explicit — never automatic)
+
+Server startup applies schema migrations only and never inserts demo records.
+To prepare a demonstration database (Caring Supermart demo business, demo
+users, sample products/transactions, default monitoring rules), run:
+
+```sh
+QUBWATCH_SEED_DEMO=1 npm run demo:seed
+```
+
+```powershell
+$env:QUBWATCH_SEED_DEMO = '1'; npm run demo:seed
+```
+
+Target database: `DATABASE_URL` (PostgreSQL) when set, otherwise SQLite at
+`DB_PATH` (default `data/qubwatch.sqlite`). The command prints its resolved
+target before doing anything. It requires `QUBWATCH_SEED_DEMO=1`, refuses
+`NODE_ENV=production` without `--production-confirmed`, is safe to rerun
+(insert-only: existing rows are kept, nothing is deleted), and only ever
+resets the passwords of the three documented demo accounts. There is no
+destructive reset. Example against a disposable database:
+
+```powershell
+$env:QUBWATCH_SEED_DEMO = '1'; $env:DB_PATH = 'C:\temp\qubwatch-demo.sqlite'; npm run demo:seed
+```
+
 ## Project structure
 
 ```text

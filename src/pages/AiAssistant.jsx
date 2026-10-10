@@ -28,8 +28,14 @@ function AiAssistant({
 
   async function ask(question) {
     if (busy) return
-    if (contextType === 'alert' && !alertById[contextId]) return
-    if (contextType === 'investigation' && !invById[contextId]) return
+    if (contextType === 'alert' && !alertById[contextId]) {
+      setError('That alert is no longer available. Refresh the alerts list and try again.')
+      return
+    }
+    if (contextType === 'investigation' && !invById[contextId]) {
+      setError('That investigation is no longer available. Refresh and try again.')
+      return
+    }
     setError('')
     setBusy(true)
     try {

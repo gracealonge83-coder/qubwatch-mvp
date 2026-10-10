@@ -19,6 +19,14 @@ import billingRoutes from './routes/billing.js'
 // Shared Express application for the local server and Render production service.
 export const app = express()
 
+// Render serves the app behind a single reverse-proxy hop that appends the
+// real client IP to X-Forwarded-For. Trust exactly one hop so req.ip is the
+// client address (used by the registration rate limiter) without trusting
+// client-supplied entries. Per Express "behind proxies" guidance this
+// assumes a single fixed-length proxy path, which Render provides; do not
+// raise this to `true` (allows spoofing) without edge-header guarantees.
+app.set('trust proxy', 1)
+
 const allowedOrigin = process.env.FRONTEND_ORIGIN || null
 app.use((req, res, next) => {
   const origin = req.headers.origin

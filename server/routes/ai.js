@@ -416,6 +416,12 @@ router.post('/ai', requireRole(...AI_REVIEWERS), async (req, res) => {
     res.status(400).json({ error: 'Invalid request', fields: { contextId: 'A record must be selected.' } })
     return
   }
+  // Fail fast with the same 503 contract as below when the assistant is not
+  // configured, without loading records first.
+  if (!process.env.GROQ_API_KEY) {
+    res.status(503).json({ error: 'The AI assistant is not configured on the server.' })
+    return
+  }
   let records = null
   let fallbackTitle = 'Business overview'
   if (contextType === 'alert') {
