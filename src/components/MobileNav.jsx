@@ -7,6 +7,7 @@ const TABS = [
   { label: 'Alerts', icon: 'alerts' },
   { label: 'Transactions', icon: 'transactions' },
   { label: 'Investigations', icon: 'investigations' },
+  { label: 'Archived', icon: 'archive' },
   { label: 'AI Assistant', icon: 'ai' },
 ]
 

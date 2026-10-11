@@ -5,7 +5,7 @@ import { formatDateTime } from '../utils/formatDateTime.js'
 const SEVERITIES = ['all', 'Low', 'Medium', 'High', 'Critical']
 const STATUSES = ['all', 'New', 'Under Review', 'Investigating', 'Resolved', 'Dismissed']
 
-function Alerts({ alerts, products, transactions, users, selectedId, onSelect, onStatusChange, investigations, onStartInvestigation, onOpenInvestigation, onAskAiAboutAlert }) {
+function Alerts({ alerts, products, transactions, users, selectedId, onSelect, onStatusChange, investigations, onStartInvestigation, onOpenInvestigation, onAskAiAboutAlert, onArchiveAlert }) {
   const [severity, setSeverity] = useState('all')
   const [status, setStatus] = useState('all')
   const [type, setType] = useState('all')
@@ -51,6 +51,18 @@ function Alerts({ alerts, products, transactions, users, selectedId, onSelect, o
       setBusyAction(null)
     }
     if (ok) setNotice({ id: selected.id, text: `Alert marked as ${newStatus}.` })
+  }
+
+  async function handleArchive() {
+    if (!selected || busyAction || !onArchiveAlert) return
+    setNotice(null)
+    setBusyAction('archive')
+    try {
+      const ok = await onArchiveAlert(selected.id)
+      if (ok) setNotice({ id: selected.id, text: 'Alert archived. Find it under Archived.' })
+    } finally {
+      setBusyAction(null)
+    }
   }
 
   async function handleStartInvestigation() {
@@ -169,6 +181,7 @@ function Alerts({ alerts, products, transactions, users, selectedId, onSelect, o
               <button className="secondary-btn" disabled={busyAction !== null} onClick={() => handleStatusChange('Under Review')}>{busyAction === 'Under Review' ? 'Updating…' : 'Review'}</button>
               <button className="secondary-btn" disabled={busyAction !== null} onClick={() => handleStatusChange('Resolved')}>{busyAction === 'Resolved' ? 'Updating…' : 'Resolve'}</button>
               <button className="secondary-btn" disabled={busyAction !== null} onClick={() => handleStatusChange('Dismissed')}>{busyAction === 'Dismissed' ? 'Updating…' : 'Dismiss'}</button>
+              <button className="secondary-btn" disabled={busyAction !== null} onClick={handleArchive}>{busyAction === 'archive' ? 'Archiving…' : 'Archive'}</button>
             </div>
             {shownNotice && <p role="status">{shownNotice}</p>}
             {shownInvestigationError && <p role="alert">{shownInvestigationError}</p>}

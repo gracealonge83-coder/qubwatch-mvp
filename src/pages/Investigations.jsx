@@ -20,7 +20,7 @@ const FINDINGS = [
 function Investigations({
   investigations, alerts, products, transactions, users, currentUser,
   selectedId, onSelect, onAddNote, onAssignInvestigator, onRecordFinding,
-  onResolve, onClose, onOpenAlert, onAskAiAboutInvestigation, auditLog,
+  onResolve, onClose, onOpenAlert, onAskAiAboutInvestigation, auditLog, onArchive,
 }) {
   const [statusFilter, setStatusFilter] = useState('all')
 
@@ -85,6 +85,7 @@ function Investigations({
             onClose={onClose}
             onOpenAlert={onOpenAlert}
             onAskAiAboutInvestigation={onAskAiAboutInvestigation}
+            onArchive={onArchive}
           />
         )}
       </div>
@@ -95,7 +96,7 @@ function Investigations({
 function InvestigationDetail({
   investigation, alert, products, transactions, users, currentUser,
   auditLog, onAddNote, onAssignInvestigator, onRecordFinding,
-  onResolve, onClose, onOpenAlert, onAskAiAboutInvestigation,
+  onResolve, onClose, onOpenAlert, onAskAiAboutInvestigation, onArchive,
 }) {
   const [noteContent, setNoteContent] = useState('')
   const [findingChoice, setFindingChoice] = useState(investigation.finding || '')
@@ -174,6 +175,19 @@ function InvestigationDetail({
       setBusyOp(null)
     }
     if (ok) setNotice({ id: investigation.id, text: 'Investigation closed.' })
+  }
+
+  async function handleArchive() {
+    if (busyOp || !onArchive) return
+    setNotice(null)
+    setBusyOp('archive')
+    let ok = false
+    try {
+      ok = await onArchive(investigation.id)
+    } finally {
+      setBusyOp(null)
+    }
+    if (ok) setNotice({ id: investigation.id, text: 'Investigation archived. Find it under Archived.' })
   }
 
   async function handleAssign(event) {
@@ -303,6 +317,9 @@ function InvestigationDetail({
           {investigation.status === 'Resolved' && (
             <button className="secondary-btn" onClick={handleClose} disabled={busyOp !== null}>{busyOp === 'close' ? 'Closing…' : 'Close investigation'}</button>
           )}
+          <div className="form-row">
+            <button className="secondary-btn" onClick={handleArchive} disabled={busyOp !== null}>{busyOp === 'archive' ? 'Archiving…' : 'Archive investigation'}</button>
+          </div>
         </div>
       ) : (
         <div className="form">

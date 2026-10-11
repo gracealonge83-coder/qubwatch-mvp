@@ -26,9 +26,9 @@ export const PG_MODE = Boolean(DATABASE_URL)
 const SQLITE_PATH = process.env.DB_PATH || path.join(process.cwd(), 'data', 'qubwatch.sqlite')
 const MIGRATIONS_DIR = path.join(process.cwd(), 'server', 'migrations')
 // SQLite 001-003 predate PostgreSQL support and contain SQLite-only dialect.
-// Migration 006 uses a portable subset and applies in both modes.
+// Migrations 006-011 use a portable subset and apply in both modes.
 const LEGACY_SQLITE_MIGRATION = /^(001|002|003)-/
-const SHARED_MIGRATION = /^006-|^007-|^008-|^009-|^010-/
+const SHARED_MIGRATION = /^006-|^007-|^008-|^009-|^010-|^011-/
 // Demo seed files (002-seed, 003-seed-passwords, 005-pg-seeds) now live in
 // server/seeds/ for the explicit `npm run demo:seed` command. This guard
 // keeps server startup seed-free in every environment — no flag or setting

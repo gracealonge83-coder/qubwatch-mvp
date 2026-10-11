@@ -41,6 +41,8 @@ function mapInvestigation(row) {
     resolvedById: row.resolved_by,
     createdAt: formatWireDate(row.created_at),
     resolvedAt: formatWireDate(row.resolved_at) || '',
+    archivedAt: row.archived_at || '',
+    archivedBy: row.archived_by || null,
   }
 }
 
@@ -68,15 +70,17 @@ router.get('/investigations', async (req, res) => {
     res.json([])
     return
   }
+  const archived = req.query.archived === 'true'
+  const filter = archived ? 'AND i.archived_at IS NOT NULL' : 'AND i.archived_at IS NULL'
   const rows = PG_MODE
     ? (await query(
       `SELECT i.* FROM investigations i JOIN users u ON u.id = i.investigator_id
-       WHERE u.business_id = $1 ORDER BY i.created_at, i.id`,
+       WHERE u.business_id = $1 ${filter} ORDER BY i.created_at, i.id`,
       [req.user.businessId],
     )).rows
     : getDb().prepare(
       `SELECT i.* FROM investigations i JOIN users u ON u.id = i.investigator_id
-       WHERE u.business_id = ? ORDER BY i.rowid`,
+       WHERE u.business_id = ? ${filter} ORDER BY i.rowid`,
     ).all(req.user.businessId)
   res.json(rows.map(mapInvestigation))
 })
@@ -407,6 +411,56 @@ router.delete('/investigations/:id', requireRole(...MANAGERS), async (req, res) 
     return
   }
   res.status(410).json({ error: 'Completed investigations are retained and cannot be deleted.' })
+})
+
+// Soft-archive a completed investigation (managers only). Notes, findings,
+// evidence links and audit history are retained; the record leaves the
+// active lists. Restoring clears the stamp and returns it to its view.
+async function setInvestigationArchived(req, res, archived) {
+  const db = PG_MODE ? null : getDb()
+  const row = await findOwnedInvestigation(db, req.params.id, req.user.businessId)
+  if (!row) {
+    res.status(404).json({ error: 'Investigation not found' })
+    return
+  }
+  const inv = mapInvestigation(row)
+  if (archived && inv.archivedAt) {
+    res.status(409).json({ error: 'Investigation is already archived.' })
+    return
+  }
+  if (!archived && !inv.archivedAt) {
+    res.status(409).json({ error: 'Investigation is not archived.' })
+    return
+  }
+  if (archived && inv.status !== 'Resolved' && inv.status !== 'Closed') {
+    res.status(409).json({ error: 'Only resolved or closed investigations can be archived.' })
+    return
+  }
+  const stamp = archived ? nowStamp() : null
+  const by = archived ? req.user.id : null
+  if (PG_MODE) {
+    await withTransaction(async (t) => {
+      await t.query('UPDATE investigations SET archived_at = $1, archived_by = $2 WHERE id = $3', [stamp, by, inv.id])
+      await addAudit(t, inv.id, req.user.id, archived ? 'Investigation archived' : 'Investigation restored')
+    })
+    const { rows } = await query('SELECT * FROM investigations WHERE id = $1', [inv.id])
+    res.json(mapInvestigation(rows[0]))
+    return
+  }
+  const update = db.transaction(() => {
+    db.prepare('UPDATE investigations SET archived_at = ?, archived_by = ? WHERE id = ?').run(stamp, by, inv.id)
+    addAudit(db, inv.id, req.user.id, archived ? 'Investigation archived' : 'Investigation restored')
+  })
+  update()
+  res.json(mapInvestigation(db.prepare('SELECT * FROM investigations WHERE id = ?').get(inv.id)))
+}
+
+router.post('/investigations/:id/archive', requireRole(...MANAGERS), async (req, res) => {
+  await setInvestigationArchived(req, res, true)
+})
+
+router.post('/investigations/:id/restore', requireRole(...MANAGERS), async (req, res) => {
+  await setInvestigationArchived(req, res, false)
 })
 
 export default router

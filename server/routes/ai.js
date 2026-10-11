@@ -237,7 +237,8 @@ async function overviewRecords(businessId) {
                JOIN products p ON p.id = t.product_id AND p.business_id = $1
                JOIN users u ON u.id = t.staff_id AND u.business_id = $1) AS transactions,
               (SELECT COUNT(*) FROM investigations i
-               JOIN users u ON u.id = i.investigator_id AND u.business_id = $1) AS investigations`,
+               JOIN users u ON u.id = i.investigator_id AND u.business_id = $1
+               WHERE i.archived_at IS NULL) AS investigations`,
       [businessId],
     )).rows[0]
     : db.prepare(
@@ -246,7 +247,8 @@ async function overviewRecords(businessId) {
                JOIN products p ON p.id = t.product_id AND p.business_id = ?
                JOIN users u ON u.id = t.staff_id AND u.business_id = ?) AS transactions,
               (SELECT COUNT(*) FROM investigations i
-               JOIN users u ON u.id = i.investigator_id AND u.business_id = ?) AS investigations`,
+               JOIN users u ON u.id = i.investigator_id AND u.business_id = ?
+               WHERE i.archived_at IS NULL) AS investigations`,
     ).get(businessId, businessId, businessId, businessId)
   const totals = PG_MODE
     ? (await query(

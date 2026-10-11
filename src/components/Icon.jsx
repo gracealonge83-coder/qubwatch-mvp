@@ -12,6 +12,7 @@ const ICON_PATHS = {
   refund: <><path d="M4 7v5h5M5 12a8 8 0 1 0 2-5.3L4 9" /><path d="M12 8v4l3 2" /></>,
   discount: <><path d="M20 13 13 20 3 10V4h6l11 9Z" /><circle cx="7.5" cy="7.5" r="1" /></>,
   alertMetric: <><path d="m12 3 9 17H3l9-17Z" /><path d="M12 9v4M12 17h.01" /></>,
+  archive: <><rect x="3" y="4" width="18" height="5" rx="1" /><path d="M5 9v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V9M10 13h4" /></>,
   close: <><path d="m6 6 12 12M18 6 6 18" /></>,
 }
 

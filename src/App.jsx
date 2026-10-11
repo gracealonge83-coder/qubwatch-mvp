@@ -8,6 +8,7 @@ import Settings from './pages/Settings.jsx'
 import Products from './pages/Products.jsx'
 import Transactions from './pages/Transactions.jsx'
 import Alerts from './pages/Alerts.jsx'
+import Archived from './pages/Archived.jsx'
 import Investigations from './pages/Investigations.jsx'
 import AiAssistant from './pages/AiAssistant.jsx'
 import Notifications from './pages/Notifications.jsx'
@@ -42,6 +43,8 @@ function App() {
   const [selectedAlertId, setSelectedAlertId] = useState(null)
   const [investigations, setInvestigations] = useState([])
   const [selectedInvestigationId, setSelectedInvestigationId] = useState(null)
+  const [archivedAlerts, setArchivedAlerts] = useState([])
+  const [archivedInvestigations, setArchivedInvestigations] = useState([])
   const [auditLog, setAuditLog] = useState([])
   const [ruleConfig, setRuleConfig] = useState({ ...DEMO_THRESHOLDS })
   const [aiContext, setAiContext] = useState({ type: 'overview', id: null })
@@ -166,6 +169,7 @@ function App() {
     setAuditLog(auditRes.ok ? auditRes.data : [])
     setRuleConfig(rulesRes.data)
     setApiError(null)
+    await refreshArchived()
     return true
   }
 
@@ -237,6 +241,8 @@ function App() {
     setSelectedAlertId(null)
     setInvestigations([])
     setSelectedInvestigationId(null)
+    setArchivedAlerts([])
+    setArchivedInvestigations([])
     setAuditLog([])
     setRuleConfig({ ...DEMO_THRESHOLDS })
     setApiError(null)
@@ -437,6 +443,53 @@ function App() {
     return true
   }
 
+  async function archiveAlert(id) {
+    const res = await api.post(`/alerts/${id}/archive`)
+    if (!res.ok) return apiFailed(res)
+    setAlerts((prev) => prev.filter((a) => a.id !== id))
+    setArchivedAlerts((prev) => [res.data, ...prev.filter((a) => a.id !== id)])
+    if (selectedAlertId === id) setSelectedAlertId(null)
+    await refreshAudit()
+    return true
+  }
+
+  async function restoreAlert(id) {
+    const res = await api.post(`/alerts/${id}/restore`)
+    if (!res.ok) return apiFailed(res)
+    setArchivedAlerts((prev) => prev.filter((a) => a.id !== id))
+    setAlerts((prev) => [...prev, res.data])
+    await refreshAudit()
+    return true
+  }
+
+  async function archiveInvestigation(invId) {
+    const res = await api.post(`/investigations/${invId}/archive`)
+    if (!res.ok) return apiFailed(res)
+    setInvestigations((prev) => prev.filter((i) => i.id !== invId))
+    setArchivedInvestigations((prev) => [res.data, ...prev.filter((i) => i.id !== invId)])
+    if (selectedInvestigationId === invId) setSelectedInvestigationId(null)
+    await refreshAudit()
+    return true
+  }
+
+  async function restoreInvestigation(invId) {
+    const res = await api.post(`/investigations/${invId}/restore`)
+    if (!res.ok) return apiFailed(res)
+    setArchivedInvestigations((prev) => prev.filter((i) => i.id !== invId))
+    setInvestigations((prev) => [...prev, res.data])
+    await refreshAudit()
+    return true
+  }
+
+  async function refreshArchived() {
+    const [archivedAlertsRes, archivedInvestigationsRes] = await Promise.all([
+      api.get('/alerts?archived=true'),
+      api.get('/investigations?archived=true'),
+    ])
+    if (archivedAlertsRes.ok) setArchivedAlerts(archivedAlertsRes.data)
+    if (archivedInvestigationsRes.ok) setArchivedInvestigations(archivedInvestigationsRes.data)
+  }
+
   const openInvestigationCount = investigations.filter(
     (i) => i.status === 'Open' || i.status === 'Under Investigation',
   ).length
@@ -509,6 +562,17 @@ function App() {
         onStartInvestigation={startInvestigation}
         onOpenInvestigation={openInvestigation}
         onAskAiAboutAlert={askAiAboutAlert}
+        onArchiveAlert={archiveAlert}
+      />
+    )
+  } else if (effectivePage === 'Archived') {
+    content = (
+      <Archived
+        alerts={archivedAlerts}
+        investigations={archivedInvestigations}
+        users={userList}
+        onRestoreAlert={restoreAlert}
+        onRestoreInvestigation={restoreInvestigation}
       />
     )
   } else if (effectivePage === 'Investigations') {
@@ -530,6 +594,7 @@ function App() {
         onOpenAlert={openAlert}
         onAskAiAboutInvestigation={askAiAboutInvestigation}
         auditLog={auditLog}
+        onArchive={archiveInvestigation}
       />
     )
   } else if (effectivePage === 'AI Assistant') {

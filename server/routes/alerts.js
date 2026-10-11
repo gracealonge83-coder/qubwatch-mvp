@@ -66,6 +66,8 @@ function mapSnapshot(row) {
     ruleValues: parseJson(row.rule_values, {}),
     evidence: parseJson(row.evidence, { products: [], transactions: [] }),
     status: row.status,
+    archivedAt: row.archived_at || '',
+    archivedBy: row.archived_by || null,
   }
 }
 
@@ -90,7 +92,7 @@ async function loadThresholds(db, businessId) {
 // Rules are evaluated for the caller's business on every read. New
 // deterministic alert IDs are snapshotted once; existing snapshots are never
 // rewritten when source data or rule values change.
-export async function deriveAlerts(db, businessId, { persistSnapshots = true } = {}) {
+export async function deriveAlerts(db, businessId, { persistSnapshots = true, archived = false } = {}) {
   const products = PG_MODE
     ? (await query('SELECT * FROM products WHERE business_id = $1 ORDER BY created_at, id', [businessId])).rows.map(mapProduct)
     : db.prepare('SELECT * FROM products WHERE business_id = ? ORDER BY rowid').all(businessId).map(mapProduct)
@@ -159,15 +161,16 @@ export async function deriveAlerts(db, businessId, { persistSnapshots = true } =
       })
     }
     const { rows } = await query(
-      `SELECT s.*, COALESCE(st.status, 'New') AS status
+      `SELECT s.*, COALESCE(st.status, 'New') AS status, st.archived_at AS archived_at, st.archived_by AS archived_by
       FROM alert_snapshots s
       LEFT JOIN alert_statuses st ON st.alert_id = s.alert_id
-      WHERE s.business_id = $1
+      WHERE s.business_id = $1 AND ${archived ? 'st.archived_at IS NOT NULL' : 'st.archived_at IS NULL'}
       ORDER BY s.generated_at DESC, s.alert_id`,
       [businessId],
     )
     const persisted = rows.map(mapSnapshot)
     if (persistSnapshots) return persisted
+    if (archived) return persisted
     const existingIds = new Set(persisted.map((alert) => alert.id))
     const unsaved = snapshots.filter((alert) => !existingIds.has(alert.id))
     const statusRows = unsaved.length > 0
@@ -203,13 +206,14 @@ export async function deriveAlerts(db, businessId, { persistSnapshots = true } =
     })()
   }
   const persisted = db.prepare(
-    `SELECT s.*, COALESCE(st.status, 'New') AS status
+    `SELECT s.*, COALESCE(st.status, 'New') AS status, st.archived_at AS archived_at, st.archived_by AS archived_by
      FROM alert_snapshots s
      LEFT JOIN alert_statuses st ON st.alert_id = s.alert_id
-     WHERE s.business_id = ?
+     WHERE s.business_id = ? AND ${archived ? 'st.archived_at IS NOT NULL' : 'st.archived_at IS NULL'}
      ORDER BY s.generated_at DESC, s.alert_id`,
   ).all(businessId).map(mapSnapshot)
   if (persistSnapshots) return persisted
+  if (archived) return persisted
   const existingIds = new Set(persisted.map((alert) => alert.id))
   const unsaved = snapshots.filter((alert) => !existingIds.has(alert.id))
   const statusRows = unsaved.length > 0
@@ -233,7 +237,8 @@ router.get('/alerts', async (req, res) => {
     res.json([])
     return
   }
-  res.json(await deriveAlerts(PG_MODE ? null : getDb(), req.user.businessId))
+  const archived = req.query.archived === 'true'
+  res.json(await deriveAlerts(PG_MODE ? null : getDb(), req.user.businessId, { archived }))
 })
 
 router.patch('/alerts/:id/status', requireRole(...MANAGERS), async (req, res) => {
@@ -279,6 +284,71 @@ router.patch('/alerts/:id/status', requireRole(...MANAGERS), async (req, res) =>
   })()
   const updated = (await deriveAlerts(db, req.user.businessId)).find((a) => a.id === req.params.id)
   res.json(updated)
+})
+
+// Soft-archive an alert (managers only). The snapshot, status history and
+// any linked investigation evidence are retained; the alert simply leaves
+// the active lists. Restoring clears the stamp and returns it to its view.
+async function setAlertArchived(req, res, archived) {
+  const db = PG_MODE ? null : getDb()
+  const active = await deriveAlerts(db, req.user.businessId)
+  let alert = active.find((a) => a.id === req.params.id)
+  let wasArchived = false
+  if (!alert) {
+    const kept = await deriveAlerts(db, req.user.businessId, { archived: true })
+    alert = kept.find((a) => a.id === req.params.id)
+    if (!alert) {
+      res.status(404).json({ error: 'Alert not found' })
+      return
+    }
+    wasArchived = true
+  }
+  if (archived && wasArchived) {
+    res.status(409).json({ error: 'Alert is already archived.' })
+    return
+  }
+  if (!archived && !wasArchived) {
+    res.status(409).json({ error: 'Alert is not archived.' })
+    return
+  }
+  const stamp = archived ? nowStamp() : null
+  const by = archived ? req.user.id : null
+  if (PG_MODE) {
+    await withTransaction(async (t) => {
+      const current = (await t.query(
+        'SELECT status, updated_by, updated_at FROM alert_statuses WHERE alert_id = $1',
+        [req.params.id],
+      )).rows[0]
+      await t.query(
+        `INSERT INTO alert_statuses (alert_id, status, updated_by, updated_at, archived_at, archived_by)
+         VALUES ($1, $2, $3, $4, $5, $6)
+         ON CONFLICT(alert_id) DO UPDATE SET archived_at = excluded.archived_at, archived_by = excluded.archived_by`,
+        [req.params.id, current ? current.status : 'New', current ? current.updated_by : req.user.id, current ? current.updated_at : nowStamp(), stamp, by],
+      )
+      await addAudit(t, null, req.user.id, archived ? `Alert archived: ${req.params.id}` : `Alert restored: ${req.params.id}`)
+    })
+  } else {
+    const run = db.transaction(() => {
+      const current = db.prepare('SELECT status, updated_by, updated_at FROM alert_statuses WHERE alert_id = ?').get(req.params.id)
+      db.prepare(
+        `INSERT INTO alert_statuses (alert_id, status, updated_by, updated_at, archived_at, archived_by)
+         VALUES (?, ?, ?, ?, ?, ?)
+         ON CONFLICT(alert_id) DO UPDATE SET archived_at = excluded.archived_at, archived_by = excluded.archived_by`,
+      ).run(req.params.id, current ? current.status : 'New', current ? current.updated_by : req.user.id, current ? current.updated_at : nowStamp(), stamp, by)
+      addAudit(db, null, req.user.id, archived ? `Alert archived: ${req.params.id}` : `Alert restored: ${req.params.id}`)
+    })
+    run()
+  }
+  const refreshed = await deriveAlerts(db, req.user.businessId, { archived })
+  res.json(refreshed.find((a) => a.id === req.params.id))
+}
+
+router.post('/alerts/:id/archive', requireRole(...MANAGERS), async (req, res) => {
+  await setAlertArchived(req, res, true)
+})
+
+router.post('/alerts/:id/restore', requireRole(...MANAGERS), async (req, res) => {
+  await setAlertArchived(req, res, false)
 })
 
 export default router
