@@ -66,6 +66,17 @@ app.use('/api', billingRoutes)
 // In production Render serves the built PWA and API from the same origin.
 if (process.env.NODE_ENV === 'production') {
   const distDir = path.resolve(process.cwd(), 'dist')
+
+  // Android Trusted Web Activity verification file.
+  app.get('/.well-known/assetlinks.json', (req, res) => {
+    res.type('application/json')
+    res.sendFile(path.join(distDir, '.well-known', 'assetlinks.json'), { dotfiles: 'allow' }, (err) => {
+      if (err && !res.headersSent) {
+        res.status(err.status || 404).end()
+      }
+    })
+  })
+
   app.use(express.static(distDir))
   app.use((req, res, next) => {
     if (req.path.startsWith('/api/')) return next()
