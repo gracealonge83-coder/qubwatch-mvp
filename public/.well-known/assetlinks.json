@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "com.onrender.qubwatch.twa",
+        "sha256_cert_fingerprints": ["45:AF:71:12:6A:17:11:ED:23:6D:A5:3E:E4:D9:4E:68:57:89:5D:39:04:70:AC:6F:FA:6A:A6:89:37:1B:F8:FB"]
+      }
+    }]
