@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { FAIRNESS_NOTE } from '../ai/mockAssistant.js'
 import { api } from '../api/client.js'
 
@@ -16,18 +16,29 @@ const ALERT_QUESTIONS = [
 function AiAssistant({
   business, alerts, investigations, products, transactions, users,
   initialContext, thresholds, onOpenAlert, onOpenInvestigation,
+  subscriptionActive, onSubscriptionRequired, pendingAsk, onPendingAskHandled,
 }) {
   const [contextType, setContextType] = useState(initialContext.type)
   const [contextId, setContextId] = useState(initialContext.id)
   const [response, setResponse] = useState(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const resumeHandled = useRef(false)
 
   const alertById = Object.fromEntries(alerts.map((a) => [a.id, a]))
   const invById = Object.fromEntries(investigations.map((i) => [i.id, i]))
 
   async function ask(question) {
     if (busy) return
+    if (!subscriptionActive) {
+      onSubscriptionRequired?.({
+        type: 'aiAsk',
+        contextType,
+        contextId,
+        question,
+      })
+      return
+    }
     if (contextType === 'alert' && !alertById[contextId]) {
       setError('That alert is no longer available. Refresh the alerts list and try again.')
       return
@@ -41,6 +52,16 @@ function AiAssistant({
     try {
       const res = await api.post('/ai', { contextType, contextId, question })
       if (!res.ok) {
+        if (res.code === 'SUBSCRIPTION_REQUIRED' || res.status === 402) {
+          onSubscriptionRequired?.({
+            type: 'aiAsk',
+            contextType,
+            contextId,
+            question,
+          }, res.error)
+          setResponse(null)
+          return
+        }
         setError(res.error)
         setResponse(null)
         return
@@ -50,6 +71,14 @@ function AiAssistant({
       setBusy(false)
     }
   }
+
+  useEffect(() => {
+    if (!pendingAsk || !subscriptionActive || resumeHandled.current) return
+    resumeHandled.current = true
+    const question = pendingAsk.question || 'summarize'
+    onPendingAskHandled?.()
+    ask(question)
+  }, [pendingAsk, subscriptionActive])
 
   function changeContext(type) {
     setContextType(type)

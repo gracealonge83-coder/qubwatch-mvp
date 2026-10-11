@@ -22,6 +22,7 @@ async function request(path, { method = 'GET', body } = {}) {
       data: null,
       error: 'Cannot reach the server. Check your connection and try again.',
       fields: null,
+      code: null,
     }
   }
   let data = null
@@ -31,10 +32,20 @@ async function request(path, { method = 'GET', body } = {}) {
     data = null
   }
   if (res.ok) {
-    return { ok: true, status: res.status, data, error: null, fields: null }
+    return { ok: true, status: res.status, data, error: null, fields: null, code: null }
   }
   if (res.status === 401) {
-    return { ok: false, status: res.status, data: null, error: 'Your session has ended. Please log in again.', fields: null }
+    return { ok: false, status: res.status, data: null, error: 'Your session has ended. Please log in again.', fields: null, code: null }
+  }
+  if (res.status === 402) {
+    return {
+      ok: false,
+      status: res.status,
+      data: data || null,
+      error: (data && data.error) || 'An active subscription is required.',
+      fields: null,
+      code: (data && data.code) || 'SUBSCRIPTION_REQUIRED',
+    }
   }
   if (res.status === 403) {
     return {
@@ -43,13 +54,14 @@ async function request(path, { method = 'GET', body } = {}) {
       data: null,
       error: (data && data.error) || 'You do not have permission to do that.',
       fields: null,
+      code: null,
     }
   }
   if (res.status === 404) {
-    return { ok: false, status: res.status, data: null, error: (data && data.error) || 'Not found.', fields: null }
+    return { ok: false, status: res.status, data: null, error: (data && data.error) || 'Not found.', fields: null, code: null }
   }
   if (res.status === 409) {
-    return { ok: false, status: res.status, data: null, error: (data && data.error) || 'That conflicts with the current state.', fields: null }
+    return { ok: false, status: res.status, data: null, error: (data && data.error) || 'That conflicts with the current state.', fields: null, code: null }
   }
   return {
     ok: false,
@@ -57,6 +69,7 @@ async function request(path, { method = 'GET', body } = {}) {
     data: null,
     error: (data && data.error) || 'Something went wrong. Please try again.',
     fields: data && data.fields ? data.fields : null,
+    code: (data && data.code) || null,
   }
 }
 

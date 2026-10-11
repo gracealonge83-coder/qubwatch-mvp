@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import Layout from './components/Layout.jsx'
+import SubscriptionModal from './components/SubscriptionModal.jsx'
 import Login from './pages/Login.jsx'
 import Register from './pages/Register.jsx'
 import Dashboard from './pages/Dashboard.jsx'
@@ -12,6 +13,10 @@ import AiAssistant from './pages/AiAssistant.jsx'
 import Notifications from './pages/Notifications.jsx'
 import { DEMO_THRESHOLDS } from '../shared/rules.js'
 import { api } from './api/client.js'
+import {
+  clearPendingSubscriptionAction,
+  readPendingSubscriptionAction,
+} from './subscription/pendingAction.js'
 
 // LOCAL DEMO ONLY: when the dev server is started with VITE_QUBWATCH_DEMO=1
 // (local .env.local, never committed), the app may establish a demo session
@@ -43,7 +48,95 @@ function App() {
   const [apiError, setApiError] = useState(null)
   const [newUserCredentials, setNewUserCredentials] = useState(null)
   const [authMode, setAuthMode] = useState('login')
+  const [subscriptionActive, setSubscriptionActive] = useState(false)
+  const [subscriptionModal, setSubscriptionModal] = useState({ open: false, pendingAction: null, message: '' })
+  const [pendingAiAsk, setPendingAiAsk] = useState(null)
   const currentUser = session.user
+
+  async function refreshSubscription() {
+    const result = await api.get('/billing/status')
+    if (!result.ok) {
+      setSubscriptionActive(false)
+      return false
+    }
+    setSubscriptionActive(!!result.data.active)
+    return !!result.data.active
+  }
+
+  function requireSubscription(pendingAction, message = '') {
+    setSubscriptionModal({ open: true, pendingAction: pendingAction || null, message })
+  }
+
+  function closeSubscriptionModal() {
+    setSubscriptionModal({ open: false, pendingAction: null, message: '' })
+  }
+
+  async function resumePendingAction(action) {
+    if (!action || typeof action !== 'object') return
+    if (action.type === 'startInvestigation' && action.alertId) {
+      setSelectedAlertId(action.alertId)
+      setPage('Alerts')
+      await startInvestigation(action.alertId, { skipGate: true })
+      return
+    }
+    if (action.type === 'askAiAboutAlert' && action.alertId) {
+      setAiContext({ type: 'alert', id: action.alertId })
+      setPage('AI Assistant')
+      return
+    }
+    if (action.type === 'openAiAssistant') {
+      if (action.contextType) {
+        setAiContext({ type: action.contextType, id: action.contextId || null })
+      }
+      setPage('AI Assistant')
+      if (action.question) {
+        setPendingAiAsk({
+          contextType: action.contextType || 'overview',
+          contextId: action.contextId || null,
+          question: action.question,
+        })
+      }
+      return
+    }
+    if (action.type === 'aiAsk') {
+      setAiContext({
+        type: action.contextType || 'overview',
+        id: action.contextId || null,
+      })
+      setPage('AI Assistant')
+      setPendingAiAsk({
+        contextType: action.contextType || 'overview',
+        contextId: action.contextId || null,
+        question: action.question || 'summarize',
+      })
+    }
+  }
+
+  async function handleBillingCallback() {
+    const url = new URL(window.location.href)
+    const params = url.searchParams
+    const callback = params.get('billing') === 'callback'
+    const reference = params.get('reference') || params.get('trxref')
+    if (!callback && !reference) return
+
+    for (const name of ['billing', 'reference', 'trxref', 'status']) params.delete(name)
+    window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`)
+
+    const pending = readPendingSubscriptionAction()
+    clearPendingSubscriptionAction()
+    if (reference) {
+      const result = await api.get(`/billing/verify?reference=${encodeURIComponent(reference)}`)
+      if (result.ok && result.data.status === 'verified') {
+        setSubscriptionActive(true)
+        closeSubscriptionModal()
+        await resumePendingAction(pending)
+        return
+      }
+      requireSubscription(pending, result.error || 'Payment was not successful. Investigations and AI Assistant remain locked.')
+      return
+    }
+    requireSubscription(pending, 'Payment was cancelled or not completed. No successful payment was recorded.')
+  }
 
   // Loads every slice from the API after login. Returns true on success.
   async function refreshAll() {
@@ -102,6 +195,10 @@ function App() {
       }
       setSession({ status: 'ready', user: me.data.user })
       await refreshAll()
+      if (cancelled) return
+      await refreshSubscription()
+      if (cancelled) return
+      await handleBillingCallback()
     }
     boot()
     return () => { cancelled = true }
@@ -113,6 +210,7 @@ function App() {
     if (!res.ok) return res.error
     setSession({ status: 'ready', user: res.data.user })
     const ok = await refreshAll()
+    if (ok) await refreshSubscription()
     return ok ? null : 'Logged in, but data failed to load. Please try again.'
   }
 
@@ -124,6 +222,7 @@ function App() {
     if (!res.ok) return { message: res.error, fields: res.fields }
     setSession({ status: 'ready', user: res.data.user })
     const ok = await refreshAll()
+    if (ok) await refreshSubscription()
     return ok ? null : { message: 'Account created, but data failed to load. Please log in.', fields: null }
   }
 
@@ -142,6 +241,10 @@ function App() {
     setRuleConfig({ ...DEMO_THRESHOLDS })
     setApiError(null)
     setNewUserCredentials(null)
+    setSubscriptionActive(false)
+    setSubscriptionModal({ open: false, pendingAction: null, message: '' })
+    setPendingAiAsk(null)
+    clearPendingSubscriptionAction()
     setPage('Dashboard')
     setAuthMode('login')
   }
@@ -230,15 +333,25 @@ function App() {
     return true
   }
 
-  async function startInvestigation(alertId) {
+  async function startInvestigation(alertId, { skipGate = false } = {}) {
     const existing = investigations.find((i) => i.alertId === alertId && i.status !== 'Closed')
     if (existing) {
       setSelectedInvestigationId(existing.id)
       setPage('Investigations')
       return true
     }
+    if (!skipGate && !subscriptionActive) {
+      requireSubscription({ type: 'startInvestigation', alertId })
+      return null
+    }
     const res = await api.post('/investigations', { alertId })
-    if (!res.ok) return apiFailed(res)
+    if (!res.ok) {
+      if (res.code === 'SUBSCRIPTION_REQUIRED' || res.status === 402) {
+        requireSubscription({ type: 'startInvestigation', alertId }, res.error)
+        return null
+      }
+      return apiFailed(res)
+    }
     setInvestigations((prev) => [...prev, res.data])
     setAlerts((prev) => prev.map((a) => (a.id === alertId ? { ...a, status: 'Investigating' } : a)))
     await refreshAudit()
@@ -253,13 +366,33 @@ function App() {
   }
 
   function askAiAboutAlert(id) {
+    if (!subscriptionActive) {
+      requireSubscription({ type: 'askAiAboutAlert', alertId: id })
+      return
+    }
     setAiContext({ type: 'alert', id })
     setPage('AI Assistant')
   }
 
   function askAiAboutInvestigation(id) {
+    if (!subscriptionActive) {
+      requireSubscription({ type: 'openAiAssistant', contextType: 'investigation', contextId: id })
+      return
+    }
     setAiContext({ type: 'investigation', id })
     setPage('AI Assistant')
+  }
+
+  function navigateWithSubscriptionGate(nextPage) {
+    if (nextPage === 'AI Assistant' && !subscriptionActive) {
+      requireSubscription({ type: 'openAiAssistant', contextType: 'overview', contextId: null })
+      return
+    }
+    setPage(nextPage)
+  }
+
+  function handleSubscriptionRequired(pendingAction, message = '') {
+    requireSubscription(pendingAction, message)
   }
 
   async function addNote(invId, content) {
@@ -346,6 +479,8 @@ function App() {
         newCredentials={newUserCredentials}
         onClearCredentials={() => setNewUserCredentials(null)}
         currentUser={currentUser}
+        subscriptionActive={subscriptionActive}
+        onSubscriptionChange={setSubscriptionActive}
       />
     )
   } else if (effectivePage === 'Products') {
@@ -411,6 +546,10 @@ function App() {
         thresholds={ruleConfig}
         onOpenAlert={openAlert}
         onOpenInvestigation={openInvestigation}
+        subscriptionActive={subscriptionActive}
+        onSubscriptionRequired={handleSubscriptionRequired}
+        pendingAsk={pendingAiAsk}
+        onPendingAskHandled={() => setPendingAiAsk(null)}
       />
     )
   } else if (effectivePage === 'Notifications') {
@@ -466,7 +605,7 @@ function App() {
   return (
     <Layout
       currentPage={effectivePage}
-      onNavigate={setPage}
+      onNavigate={navigateWithSubscriptionGate}
       businessName={biz.name}
       notificationCount={alerts.filter((a) => a.status === 'New' || a.status === 'Under Review').length}
       onOpenNotifications={() => setPage('Notifications')}
@@ -482,6 +621,13 @@ function App() {
         </div>
       )}
       {content}
+      <SubscriptionModal
+        open={subscriptionModal.open}
+        currentUser={currentUser}
+        pendingAction={subscriptionModal.pendingAction}
+        paymentMessage={subscriptionModal.message}
+        onClose={closeSubscriptionModal}
+      />
     </Layout>
   )
 }

@@ -4,7 +4,7 @@ import TeamSetup from '../components/TeamSetup.jsx'
 import MonitoringRules from '../components/MonitoringRules.jsx'
 import { api } from '../api/client.js'
 
-function SubscriptionSettings() {
+function SubscriptionSettings({ subscriptionActive, onSubscriptionChange }) {
   const [email, setEmail] = useState('')
   const [payment, setPayment] = useState({ active: false, plan: null, reference: null, status: 'none' })
   const [loading, setLoading] = useState(true)
@@ -34,6 +34,7 @@ function SubscriptionSettings() {
         reference,
         status: 'verified',
       }))
+      onSubscriptionChange?.(true)
       setNotice('Payment verified successfully. Your QubWatch subscription demonstration is active.')
       return true
     } finally {
@@ -44,31 +45,6 @@ function SubscriptionSettings() {
   useEffect(() => {
     let mounted = true
     async function load() {
-      const url = new URL(window.location.href)
-      const params = url.searchParams
-      const callback = params.get('billing') === 'callback'
-      const reference = params.get('reference') || params.get('trxref')
-      if (callback || reference) {
-        for (const name of ['billing', 'reference', 'trxref', 'status']) params.delete(name)
-        window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`)
-      }
-
-      let verified = false
-      if (reference) {
-        setVerifying(true)
-        const result = await api.get(`/billing/verify?reference=${encodeURIComponent(reference)}`)
-        if (!mounted) return
-        if (result.ok && result.data.status === 'verified') {
-          verified = true
-          setNotice('Payment verified successfully. Your QubWatch subscription demonstration is active.')
-        } else {
-          setError(result.error || 'Paystack has not confirmed a successful payment.')
-        }
-        setVerifying(false)
-      } else if (callback) {
-        setError('Payment was cancelled or not completed. No successful payment was recorded.')
-      }
-
       const result = await api.get('/billing/status')
       if (!mounted) return
       if (result.ok) {
@@ -79,17 +55,21 @@ function SubscriptionSettings() {
           reference: current.reference,
           status: current.status,
         })
-      } else if (!reference) {
+        onSubscriptionChange?.(!!current.active)
+      } else {
         setError(result.error)
-      }
-      if (verified) {
-        setPayment((current) => ({ ...current, active: true, status: 'verified' }))
       }
       setLoading(false)
     }
     load()
     return () => { mounted = false }
-  }, [])
+  }, [onSubscriptionChange])
+
+  useEffect(() => {
+    if (subscriptionActive) {
+      setPayment((current) => ({ ...current, active: true, status: 'verified' }))
+    }
+  }, [subscriptionActive])
 
   async function startPayment(event) {
     event.preventDefault()
@@ -170,13 +150,22 @@ function SubscriptionSettings() {
   )
 }
 
-function Settings({ business, onSaveBusiness, users, onAddUser, onUpdateUser, ruleConfig, canEditRules, onSaveRules, onRestoreRules, newCredentials, onClearCredentials, currentUser }) {
+function Settings({
+  business, onSaveBusiness, users, onAddUser, onUpdateUser, ruleConfig, canEditRules,
+  onSaveRules, onRestoreRules, newCredentials, onClearCredentials, currentUser,
+  subscriptionActive, onSubscriptionChange,
+}) {
   return (
     <div className="grid">
       {currentUser && currentUser.role === 'Business Owner' && <BusinessSetup business={business} onSave={onSaveBusiness} />}
       <TeamSetup users={users} onAdd={onAddUser} onUpdate={onUpdateUser} newCredentials={newCredentials} onClearCredentials={onClearCredentials} />
       <MonitoringRules config={ruleConfig} canEdit={canEditRules} onSave={onSaveRules} onRestore={onRestoreRules} />
-      {currentUser && currentUser.role === 'Business Owner' && <SubscriptionSettings />}
+      {currentUser && currentUser.role === 'Business Owner' && (
+        <SubscriptionSettings
+          subscriptionActive={subscriptionActive}
+          onSubscriptionChange={onSubscriptionChange}
+        />
+      )}
     </div>
   )
 }

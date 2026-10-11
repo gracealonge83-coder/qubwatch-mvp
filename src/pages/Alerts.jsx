@@ -1,8 +1,7 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { formatDateTime } from '../utils/formatDateTime.js'
 
-// Stage 3 alert review (PRD Sections 18-21 + 31). Review only.
-// No investigations, no automated decisions. "Start investigation" arrives in Stage 4.
+// Alert review and investigation actions (PRD Sections 18-21 + 31).
 const SEVERITIES = ['all', 'Low', 'Medium', 'High', 'Critical']
 const STATUSES = ['all', 'New', 'Under Review', 'Investigating', 'Resolved', 'Dismissed']
 
@@ -11,7 +10,9 @@ function Alerts({ alerts, products, transactions, users, selectedId, onSelect, o
   const [status, setStatus] = useState('all')
   const [type, setType] = useState('all')
   const [notice, setNotice] = useState(null)
+  const [investigationError, setInvestigationError] = useState(null)
   const [busyAction, setBusyAction] = useState(null)
+  const investigationLock = useRef(false)
 
   const types = ['all', ...new Set(alerts.map((a) => a.type))]
   const productById = Object.fromEntries(products.map((p) => [p.id, p]))
@@ -35,6 +36,9 @@ function Alerts({ alerts, products, transactions, users, selectedId, onSelect, o
     : null
   const canStart = selected && (selected.status === 'New' || selected.status === 'Under Review')
   const shownNotice = notice && selected && notice.id === selected.id ? notice.text : null
+  const shownInvestigationError = investigationError && selected && investigationError.id === selected.id
+    ? investigationError.text
+    : null
 
   async function handleStatusChange(newStatus) {
     if (!selected || busyAction) return
@@ -50,12 +54,27 @@ function Alerts({ alerts, products, transactions, users, selectedId, onSelect, o
   }
 
   async function handleStartInvestigation() {
-    if (!selected || busyAction) return
+    if (!selected || investigationLock.current) return
+    investigationLock.current = true
     setNotice(null)
+    setInvestigationError(null)
     setBusyAction('investigation')
     try {
-      await onStartInvestigation(selected.id)
+      const ok = await onStartInvestigation(selected.id)
+      // null means the subscription gate handled the click (modal shown).
+      if (ok === false) {
+        setInvestigationError({
+          id: selected.id,
+          text: 'Could not start the investigation. Check the error above, then refresh Alerts and try again.',
+        })
+      }
+    } catch (error) {
+      setInvestigationError({
+        id: selected.id,
+        text: `Could not start the investigation: ${error instanceof Error ? error.message : 'Unexpected error'}. Please try again.`,
+      })
     } finally {
+      investigationLock.current = false
       setBusyAction(null)
     }
   }
@@ -152,6 +171,7 @@ function Alerts({ alerts, products, transactions, users, selectedId, onSelect, o
               <button className="secondary-btn" disabled={busyAction !== null} onClick={() => handleStatusChange('Dismissed')}>{busyAction === 'Dismissed' ? 'Updating…' : 'Dismiss'}</button>
             </div>
             {shownNotice && <p role="status">{shownNotice}</p>}
+            {shownInvestigationError && <p role="alert">{shownInvestigationError}</p>}
             <div className="form-row">
               {existingInvestigation ? (
                 <button className="secondary-btn" onClick={() => onOpenInvestigation(existingInvestigation.id)}>Open investigation</button>

@@ -6,6 +6,7 @@ import { newId } from '../ids.js'
 import { deriveAlerts } from './alerts.js'
 import { addAudit } from '../auditLog.js'
 import { formatWireDate } from '../dates.js'
+import { requireActiveSubscription } from '../subscription.js'
 
 const MANAGERS = ['Business Owner', 'Authorized Manager']
 const REVIEWERS = [...MANAGERS, 'Administrator']
@@ -90,7 +91,7 @@ router.get('/investigations/:id', requireRole(...REVIEWERS), async (req, res) =>
   res.json(mapInvestigation(row))
 })
 
-router.post('/investigations', requireRole(...MANAGERS), async (req, res) => {
+router.post('/investigations', requireRole(...MANAGERS), requireActiveSubscription(), async (req, res) => {
   const body = req.body || {}
   if (typeof body.alertId !== 'string' || body.alertId === '') {
     badRequest(res, { alertId: 'Alert is required.' })

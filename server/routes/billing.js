@@ -4,10 +4,12 @@ import { getDb, query, PG_MODE } from '../db.js'
 import { requireAuth, requireRole } from '../auth.js'
 import { badRequest, nowStamp } from '../validate.js'
 import { newId } from '../ids.js'
+import { getBusinessSubscription } from '../subscription.js'
 
 const PAYSTACK_URL = 'https://api.paystack.co'
 const PAYSTACK_TIMEOUT_MS = 20000
 const OWNERS = ['Business Owner']
+const STATUS_ROLES = ['Business Owner', 'Authorized Manager', 'Administrator']
 
 const PLANS = {
   monthly: { amount: 500000, currency: 'NGN' },
@@ -72,22 +74,6 @@ function findPayment(db, userId, businessId, reference) {
       `SELECT b.* FROM billing_payments b JOIN users u ON u.id = b.user_id
        WHERE b.user_id = ? AND u.business_id = ? AND b.reference = ?`,
     ).get(userId, businessId, reference) || null,
-  )
-}
-
-function latestPayment(db, userId, businessId) {
-  if (PG_MODE) {
-    return query(
-      `SELECT b.* FROM billing_payments b JOIN users u ON u.id = b.user_id
-       WHERE b.user_id = $1 AND u.business_id = $2 ORDER BY b.created_at DESC, b.id DESC LIMIT 1`,
-      [userId, businessId],
-    ).then(({ rows }) => rows[0] || null)
-  }
-  return Promise.resolve(
-    db.prepare(
-      `SELECT b.* FROM billing_payments b JOIN users u ON u.id = b.user_id
-       WHERE b.user_id = ? AND u.business_id = ? ORDER BY b.created_at DESC, b.id DESC LIMIT 1`,
-    ).get(userId, businessId) || null,
   )
 }
 
@@ -165,14 +151,9 @@ function callbackOrigin(req) {
 const router = Router()
 router.use(requireAuth)
 
-router.get('/billing/status', requireRole(...OWNERS), async (req, res) => {
-  const row = await latestPayment(database(), req.user.id, req.user.businessId)
-  res.json({
-    active: !!row && row.status === 'verified',
-    plan: row ? row.plan : null,
-    reference: row ? row.reference : null,
-    status: row ? row.status : 'none',
-  })
+router.get('/billing/status', requireRole(...STATUS_ROLES), async (req, res) => {
+  const status = await getBusinessSubscription(req.user.businessId)
+  res.json(status)
 })
 
 router.post('/billing/initialize', requireRole(...OWNERS), async (req, res) => {
@@ -218,7 +199,11 @@ router.post('/billing/initialize', requireRole(...OWNERS), async (req, res) => {
       amount: selectedPlan.amount,
       reference,
       callback_url: `${origin}/?billing=callback`,
-      metadata: { plan, user_id: req.user.id },
+      metadata: {
+        plan,
+        user_id: req.user.id,
+        business_id: req.user.businessId,
+      },
     },
   })
   if (result.error) {

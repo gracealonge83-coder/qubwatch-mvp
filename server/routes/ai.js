@@ -3,6 +3,7 @@ import { getDb, query, PG_MODE } from '../db.js'
 import { requireAuth, requireRole } from '../auth.js'
 import { badRequest } from '../validate.js'
 import { deriveAlerts } from './alerts.js'
+import { requireActiveSubscription } from '../subscription.js'
 
 // Groq-backed AI Assistant (reads QubWatch records, explains them to the
 // reviewer). The API key never leaves the server: it is read from
@@ -401,7 +402,7 @@ async function callGroq(systemPrompt, userPrompt) {
 const router = Router()
 router.use(requireAuth)
 
-router.post('/ai', requireRole(...AI_REVIEWERS), async (req, res) => {
+router.post('/ai', requireRole(...AI_REVIEWERS), requireActiveSubscription(), async (req, res) => {
   const body = req.body || {}
   const { contextType, contextId, question } = body
   if (!CONTEXTS.includes(contextType)) {
