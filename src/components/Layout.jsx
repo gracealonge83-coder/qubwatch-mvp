@@ -30,6 +30,25 @@ const PAGE_DESCRIPTIONS = {
   Notifications: 'See alerts and investigation activity that may need attention.',
 }
 
+function MainNav({ items, currentPage, onNavigate, notificationCount, className }) {
+  return (
+    <nav className={className} aria-label="Main navigation">
+      {items.map((item) => (
+        <button
+          key={item.page}
+          className={item.page === currentPage ? 'main-nav-btn active' : 'main-nav-btn'}
+          style={{ '--nav-accent': item.accent, '--nav-surface': item.surface, '--nav-ink': item.ink }}
+          onClick={() => onNavigate(item.page)}
+          aria-current={item.page === currentPage ? 'page' : undefined}
+        >
+          <Icon name={item.icon} size={19} />
+          <span>{item.label === 'Alerts' && notificationCount > 0 ? `Alerts (${notificationCount})` : item.label}</span>
+        </button>
+      ))}
+    </nav>
+  )
+}
+
 function Layout({ currentPage, onNavigate, businessName, notificationCount, onOpenNotifications, user, onLogout, children }) {
   const isStaff = user?.role === 'Staff User'
   const navItems = isStaff
@@ -46,6 +65,14 @@ function Layout({ currentPage, onNavigate, businessName, notificationCount, onOp
             <p className="tagline">See what deserves your utmost attention.</p>
           </div>
         </div>
+
+        <MainNav
+          items={navItems}
+          currentPage={currentPage}
+          onNavigate={onNavigate}
+          notificationCount={notificationCount}
+          className="main-nav main-nav-sidebar"
+        />
 
         <div className="side-controls">
           <div className="sidebar-business">
@@ -68,6 +95,7 @@ function Layout({ currentPage, onNavigate, businessName, notificationCount, onOp
               <span className="app-brand-mark" aria-hidden="true"><Icon name="dashboard" size={18} /></span>
               <span className="app-brand-name">QUBWATCH</span>
             </div>
+            <p className="app-tagline">See what deserves your utmost attention.</p>
             <div className="topbar-actions">
               <button
                 className={currentPage === 'Notifications' ? 'notification-btn active' : 'notification-btn'}
@@ -93,20 +121,6 @@ function Layout({ currentPage, onNavigate, businessName, notificationCount, onOp
           </div>
         </header>
 
-        <nav className="main-nav" aria-label="Main navigation">
-          {navItems.map((item) => (
-            <button
-              key={item.page}
-              className={item.page === currentPage ? 'main-nav-btn active' : 'main-nav-btn'}
-              style={{ '--nav-accent': item.accent, '--nav-surface': item.surface, '--nav-ink': item.ink }}
-              onClick={() => onNavigate(item.page)}
-              aria-current={item.page === currentPage ? 'page' : undefined}
-            >
-              <Icon name={item.icon} size={19} />
-              <span>{item.label === 'Alerts' && notificationCount > 0 ? `Alerts (${notificationCount})` : item.label}</span>
-            </button>
-          ))}
-        </nav>
         {showArchiveLink && (
           <div className="archive-bar">
             <button
@@ -120,6 +134,14 @@ function Layout({ currentPage, onNavigate, businessName, notificationCount, onOp
           </div>
         )}
         <main className="main">{children}</main>
+
+        <MainNav
+          items={navItems}
+          currentPage={currentPage}
+          onNavigate={onNavigate}
+          notificationCount={notificationCount}
+          className="main-nav main-nav-bottom"
+        />
 
         <footer className="footer">
           <p>QubWatch — See what deserves your utmost attention.</p>
