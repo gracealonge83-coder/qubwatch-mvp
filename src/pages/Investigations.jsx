@@ -187,7 +187,7 @@ function InvestigationDetail({
     } finally {
       setBusyOp(null)
     }
-    if (ok) setNotice({ id: investigation.id, text: 'Investigation archived. Find it under Archived.' })
+    if (ok) setNotice({ id: investigation.id, text: 'Investigation archived. Find it in archived records.' })
   }
 
   async function handleAssign(event) {

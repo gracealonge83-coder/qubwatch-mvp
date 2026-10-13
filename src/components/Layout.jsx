@@ -1,18 +1,22 @@
 // App shell: header, main navigation (PRD Section 11), footer.
 // Responsive layout is handled in index.css.
-import MobileNav from './MobileNav.jsx'
 import Icon from './Icon.jsx'
 
+// Main navigation in the required product order. Archived records stay
+// available through a secondary link (see ARCHIVE_PAGES below), not here.
 const NAV_ITEMS = [
-  { label: 'Dashboard', icon: 'dashboard' },
-  { label: 'Products', icon: 'products' },
-  { label: 'Transactions', icon: 'transactions' },
-  { label: 'Alerts', icon: 'alerts' },
-  { label: 'Investigations', icon: 'investigations' },
-  { label: 'Archived', icon: 'archive' },
-  { label: 'AI Assistant', icon: 'ai' },
-  { label: 'Settings', icon: 'settings' },
+  { label: 'Dashboard', page: 'Dashboard', icon: 'dashboard', accent: '#0d9488', surface: '#ccfbf1', ink: '#0f766e' },
+  { label: 'Products', page: 'Products', icon: 'products', accent: '#2563eb', surface: '#dbeafe', ink: '#1d4ed8' },
+  { label: 'Transactions', page: 'Transactions', icon: 'transactions', accent: '#16a34a', surface: '#dcfce7', ink: '#15803d' },
+  { label: 'Alerts', page: 'Alerts', icon: 'alerts', accent: '#d97706', surface: '#fef3c7', ink: '#92400e' },
+  { label: 'Investigation', page: 'Investigations', icon: 'investigations', accent: '#0f766e', surface: '#ccfbf1', ink: '#115e59' },
+  { label: 'AI Assistant', page: 'AI Assistant', icon: 'ai', accent: '#a16207', surface: '#fef9c3', ink: '#854d0e' },
+  { label: 'Settings', page: 'Settings', icon: 'settings', accent: '#475569', surface: '#e2e8f0', ink: '#1e293b' },
 ]
+
+// Pages where the secondary "Archived records" link is offered, so the
+// Archived page stays reachable without being a main navigation item.
+const ARCHIVE_PAGES = ['Alerts', 'Investigations', 'Archived']
 
 const PAGE_DESCRIPTIONS = {
   Dashboard: 'A clear view of recorded business activity and items to review.',
@@ -29,8 +33,9 @@ const PAGE_DESCRIPTIONS = {
 function Layout({ currentPage, onNavigate, businessName, notificationCount, onOpenNotifications, user, onLogout, children }) {
   const isStaff = user?.role === 'Staff User'
   const navItems = isStaff
-    ? NAV_ITEMS.filter((item) => ['Dashboard', 'Products', 'Transactions'].includes(item.label))
+    ? NAV_ITEMS.filter((item) => ['Dashboard', 'Products', 'Transactions'].includes(item.page))
     : NAV_ITEMS
+  const showArchiveLink = !isStaff && ARCHIVE_PAGES.includes(currentPage)
   return (
     <div className="app shell">
       <aside className="sidebar">
@@ -41,19 +46,6 @@ function Layout({ currentPage, onNavigate, businessName, notificationCount, onOp
             <p className="tagline">See what deserves your utmost attention.</p>
           </div>
         </div>
-
-        <nav className="side-nav" aria-label="Main navigation">
-          {navItems.map((item) => (
-            <button
-              key={item.label}
-              className={item.label === currentPage ? 'side-nav-btn active' : 'side-nav-btn'}
-              onClick={() => onNavigate(item.label)}
-            >
-              <Icon name={item.icon} size={19} />
-              <span>{item.label}</span>
-            </button>
-          ))}
-        </nav>
 
         <div className="side-controls">
           <div className="sidebar-business">
@@ -71,42 +63,68 @@ function Layout({ currentPage, onNavigate, businessName, notificationCount, onOp
 
       <div className="shell-main">
         <header className="topbar">
+          <div className="topbar-brandrow">
+            <div className="app-brand">
+              <span className="app-brand-mark" aria-hidden="true"><Icon name="dashboard" size={18} /></span>
+              <span className="app-brand-name">QUBWATCH</span>
+            </div>
+            <div className="topbar-actions">
+              <button
+                className={currentPage === 'Notifications' ? 'notification-btn active' : 'notification-btn'}
+                onClick={onOpenNotifications}
+                aria-label={`Notifications${notificationCount > 0 ? `, ${notificationCount} need review` : ''}`}
+                title="Notifications"
+              >
+                <Icon name="bell" size={19} />
+                <span className="notification-label">Notifications</span>
+                {notificationCount > 0 && <span className="notification-count">{notificationCount}</span>}
+              </button>
+              {user && (
+                <button className="logout-btn" onClick={onLogout} aria-label={`Log out ${user.name}`}>
+                  <Icon name="logout" size={17} />
+                  <span>Log out</span>
+                </button>
+              )}
+            </div>
+          </div>
           <div className="topbar-heading">
             <h2>{currentPage}</h2>
             <p>{PAGE_DESCRIPTIONS[currentPage] || 'Business monitoring and investigation workspace.'}</p>
           </div>
-          <div className="topbar-actions">
-            <button
-              className={currentPage === 'Notifications' ? 'notification-btn active' : 'notification-btn'}
-              onClick={onOpenNotifications}
-              aria-label={`Notifications${notificationCount > 0 ? `, ${notificationCount} need review` : ''}`}
-              title="Notifications"
-            >
-              <Icon name="bell" size={19} />
-              <span className="notification-label">Notifications</span>
-              {notificationCount > 0 && <span className="notification-count">{notificationCount}</span>}
-            </button>
-            {user && (
-              <button className="logout-btn" onClick={onLogout} aria-label={`Log out ${user.name}`}>
-                <Icon name="logout" size={17} />
-                <span>Log out</span>
-              </button>
-            )}
-          </div>
         </header>
+
+        <nav className="main-nav" aria-label="Main navigation">
+          {navItems.map((item) => (
+            <button
+              key={item.page}
+              className={item.page === currentPage ? 'main-nav-btn active' : 'main-nav-btn'}
+              style={{ '--nav-accent': item.accent, '--nav-surface': item.surface, '--nav-ink': item.ink }}
+              onClick={() => onNavigate(item.page)}
+              aria-current={item.page === currentPage ? 'page' : undefined}
+            >
+              <Icon name={item.icon} size={19} />
+              <span>{item.label === 'Alerts' && notificationCount > 0 ? `Alerts (${notificationCount})` : item.label}</span>
+            </button>
+          ))}
+        </nav>
+        {showArchiveLink && (
+          <div className="archive-bar">
+            <button
+              className={currentPage === 'Archived' ? 'archive-link active' : 'archive-link'}
+              onClick={() => onNavigate('Archived')}
+              aria-current={currentPage === 'Archived' ? 'page' : undefined}
+            >
+              <Icon name="archive" size={16} />
+              <span>Archived records</span>
+            </button>
+          </div>
+        )}
         <main className="main">{children}</main>
 
         <footer className="footer">
           <p>QubWatch — See what deserves your utmost attention.</p>
         </footer>
       </div>
-
-      <MobileNav
-        currentPage={currentPage}
-        onNavigate={onNavigate}
-        openAlertCount={notificationCount}
-        userRole={user?.role}
-      />
     </div>
   )
 }

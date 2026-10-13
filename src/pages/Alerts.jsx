@@ -59,7 +59,7 @@ function Alerts({ alerts, products, transactions, users, selectedId, onSelect, o
     setBusyAction('archive')
     try {
       const ok = await onArchiveAlert(selected.id)
-      if (ok) setNotice({ id: selected.id, text: 'Alert archived. Find it under Archived.' })
+      if (ok) setNotice({ id: selected.id, text: 'Alert archived. Find it in archived records.' })
     } finally {
       setBusyAction(null)
     }

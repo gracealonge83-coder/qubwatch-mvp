@@ -91,47 +91,6 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 
 .brand { margin: 0; color: #fff; font-size: 20px; font-weight: 760; letter-spacing: -0.6px; line-height: 1.2; }
 .tagline { margin: 4px 0 0; color: #ccfbf1; font-size: 11px; line-height: 1.3; }
-.side-nav { display: grid; gap: 5px; }
-
-.side-nav-btn {
-  display: flex;
-  min-height: 45px;
-  width: 100%;
-  align-items: center;
-  gap: 13px;
-  padding: 0 12px;
-  border: 1px solid transparent;
-  border-radius: 9px;
-  background: transparent;
-  color: var(--sidebar-text);
-  text-align: left;
-  font-size: 13px;
-  font-weight: 540;
-  cursor: pointer;
-  transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease;
-}
-
-.side-nav-btn svg { flex: 0 0 auto; color: #ccfbf1; }
-.side-nav-btn:hover { background: var(--teal-hover); color: #fff; }
-.side-nav-btn:hover svg { color: #e2e8f0; }
-.side-nav-btn.active {
-  position: relative;
-  border-color: rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.1);
-  color: #f0fdfa;
-  font-weight: 650;
-}
-.side-nav-btn.active::before {
-  position: absolute;
-  top: 9px;
-  bottom: 9px;
-  left: -14px;
-  width: 3px;
-  border-radius: 0 3px 3px 0;
-  background: var(--surface-teal);
-  content: "";
-}
-.side-nav-btn.active svg { color: var(--surface-teal); }
 
 .side-controls { display: grid; gap: 17px; margin-top: auto; }
 .sidebar-business { display: grid; gap: 7px; padding: 0 8px; }
@@ -183,14 +142,39 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   top: 0;
   display: flex;
   min-height: 100px;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 19px clamp(24px, 4vw, 56px);
+  flex-direction: column;
+  justify-content: center;
+  gap: 14px;
+  padding: 16px clamp(24px, 4vw, 56px);
   border-bottom: 1px solid var(--border);
   background: rgba(255, 255, 255, 0.96);
   backdrop-filter: blur(12px);
 }
+
+.topbar-brandrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.app-brand { display: flex; min-width: 0; align-items: center; gap: 10px; }
+.app-brand-mark {
+  position: relative;
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--teal);
+  color: #fff;
+}
+.app-brand-mark::after {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--gold);
+  content: "";
+}
+.app-brand-name { color: var(--ink); font-size: 19px; font-weight: 800; letter-spacing: 2.4px; line-height: 1; white-space: nowrap; }
 
 .topbar-heading { min-width: 0; }
 .topbar-kicker { display: block; margin-bottom: 2px; color: var(--teal); font-size: 9px; font-weight: 760; letter-spacing: 1.35px; }
@@ -219,6 +203,64 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .notification-btn.active { border-color: rgba(13, 148, 136, 0.24); background: #f0fdfa; color: var(--teal-hover); }
 .notification-count { display: grid; min-width: 19px; height: 19px; place-items: center; border-radius: 10px; background: #fef3c7; color: #92400e; font-size: 10px; font-weight: 750; }
 .logout-btn { background: transparent; }
+
+/* Main navigation bar below the header: one colourful pill per page.
+ * Colour comes from per-item --nav-accent/--nav-surface/--nav-ink set in
+ * Layout.jsx; inactive text stays dark for contrast. Wraps, never scrolls. */
+.main-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px clamp(24px, 4vw, 56px);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.main-nav-btn {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 640;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
+}
+.main-nav-btn svg { flex: 0 0 auto; color: var(--nav-accent); }
+.main-nav-btn:hover { border-color: var(--nav-accent); background: var(--nav-surface); color: var(--nav-ink); }
+.main-nav-btn.active {
+  border-color: var(--nav-accent);
+  background: var(--nav-surface);
+  color: var(--nav-ink);
+  font-weight: 720;
+  box-shadow: inset 0 -3px 0 var(--nav-accent);
+}
+
+/* Secondary entry point to archived records. Rendered only on
+ * Alerts/Investigations/Archived for non-staff users. */
+.archive-bar { display: flex; padding: 10px clamp(24px, 4vw, 56px) 0; }
+.archive-link {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  gap: 7px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--secondary);
+  font-size: 12px;
+  font-weight: 620;
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+.archive-link:hover { border-color: var(--border-strong); background: var(--surface-soft); color: var(--ink); }
+.archive-link.active { border-color: rgba(13, 148, 136, 0.24); background: #f0fdfa; color: var(--teal-hover); }
 .main { width: min(100%, 1600px); margin: 0 auto; padding: 32px clamp(24px, 4vw, 56px) 42px; }
 
 .grid { display: grid; min-width: 0; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 20px; }
@@ -449,7 +491,6 @@ tbody tr:hover { background: #f0fdfa; }
 .subscription-modal { border-top: 3px solid var(--gold); }
 .card:has(> h2:first-child) { overflow-wrap: anywhere; }
 
-.mobile-nav { display: none; }
 .footer { margin-top: auto; padding: 20px 24px 24px; color: #94a3b8; text-align: center; font-size: 10px; }
 
 .app:not(.shell) { display: flex; min-height: 100vh; flex-direction: column; background: var(--bg); }
@@ -490,7 +531,12 @@ tbody tr:hover { background: #f0fdfa; }
   .notification-btn, .logout-btn { width: 39px; min-height: 39px; padding: 0; }
   .notification-label, .logout-btn span { display: none; }
   .notification-count { position: absolute; min-width: 16px; height: 16px; margin: -21px 0 0 21px; font-size: 9px; }
-  .main { padding: 24px 18px 102px; }
+  .app-brand-mark { width: 32px; height: 32px; border-radius: 9px; }
+  .app-brand-name { font-size: 16px; letter-spacing: 2px; }
+  .main-nav { gap: 7px; padding: 10px 18px; }
+  .main-nav-btn { min-height: 40px; flex: 1 1 140px; justify-content: center; padding: 0 10px; font-size: 12px; }
+  .archive-bar { padding: 8px 18px 0; }
+  .main { padding: 24px 18px 42px; }
   .grid, .alerts-page, .investigations-page, .ai-assistant-page { grid-template-columns: minmax(0, 1fr); gap: 14px; }
   .alerts-page > .card:first-child, .investigations-page > .card:first-child, .ai-controls { position: static; }
   .card { padding: 18px; }
@@ -500,51 +546,16 @@ tbody tr:hover { background: #f0fdfa; }
   .dash-top h1 { font-size: 26px; }
   .toolbar input, .toolbar select { min-width: min(100%, 150px); }
   .form-row > button { flex: 0 1 auto; }
-  .mobile-nav {
-    position: fixed;
-    z-index: 10;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    display: flex;
-    justify-content: space-around;
-    gap: 2px;
-    padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
-    border-top: 1px solid var(--border);
-    background: rgba(255, 255, 255, 0.97);
-    box-shadow: 0 -6px 20px rgba(15, 23, 42, 0.06);
-    backdrop-filter: blur(12px);
-  }
-  .tab-btn {
-    display: flex;
-    min-width: 0;
-    min-height: 52px;
-    flex: 1 1 0;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 3px;
-    padding: 5px 2px;
-    border: 1px solid transparent;
-    border-radius: 9px;
-    background: transparent;
-    color: var(--muted);
-    cursor: pointer;
-  }
-  .tab-btn span { max-width: 100%; overflow: hidden; font-size: 9px; font-weight: 620; text-overflow: ellipsis; white-space: nowrap; }
-  .tab-btn.active {
-    border-top-color: var(--teal);
-    background: var(--surface-teal);
-    color: var(--teal-hover);
-    box-shadow: inset 0 2px var(--teal);
-  }
-  .footer { padding-bottom: 84px; }
 }
 
 @media (max-width: 480px) {
   .topbar-heading p { display: none; }
   .topbar { min-height: 70px; }
-  .main { padding: 19px 13px 96px; }
+  .app-brand-name { font-size: 15px; letter-spacing: 1.8px; }
+  .main-nav { gap: 6px; padding: 9px 13px; }
+  .main-nav-btn { flex: 1 1 130px; font-size: 11.5px; }
+  .archive-bar { padding: 8px 13px 0; }
+  .main { padding: 19px 13px 42px; }
   .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .kpi { padding: 14px 12px; }
   .kpi-icon { width: 31px; height: 31px; }
