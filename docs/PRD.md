@@ -1047,7 +1047,7 @@ QubWatch is implemented as a full-stack application:
 
 **React/Vite frontend and installable PWA → Express API → SQLite for local development or Supabase-hosted PostgreSQL in production**
 
-The production application is deployed on Render. The frontend communicates with the Express API through routes under `/api`; the backend validates writes, applies server-side authentication and role checks and persists production application data in Supabase-hosted PostgreSQL through the Render backend's server-side `DATABASE_URL`. Local development can use SQLite when `DATABASE_URL` is unset.
+The production application is deployed on Render at https://qubwatch.onrender.com, which serves the production frontend and Express API. The frontend communicates with the API through routes under `/api`; the backend validates writes, applies server-side authentication and role checks and persists production application data in Supabase-hosted PostgreSQL through the Render backend's server-side `DATABASE_URL`. Local development can use SQLite when `DATABASE_URL` is unset. Netlify Deploy Preview URLs generated for pull requests are review previews and are not the production deployment.
 
 ## 44.2 Technology Stack
 
@@ -1129,7 +1129,7 @@ Implementation work should follow these constraints:
 
 ## 44.8 Current Phase and Roadmap
 
-QubWatch is a deployed full-stack MVP with a React/Vite frontend, Express backend/API, Supabase-hosted PostgreSQL production database and Render production deployment. Implemented functionality includes server-side authentication/session handling, role-based access control, monitoring and alerting, investigation workflows, server-side Groq AI assistance, a Paystack Test Mode subscription integration, responsive mobile UI and an installable PWA.
+QubWatch is a deployed full-stack MVP with a React/Vite frontend and Express backend/API served from its production Render deployment at https://qubwatch.onrender.com, plus a Supabase-hosted PostgreSQL production database. Implemented functionality includes server-side authentication/session handling, role-based access control, monitoring and alerting, investigation workflows, server-side Groq AI assistance, a Paystack Test Mode subscription integration, responsive mobile UI and an installable PWA.
 
 The current roadmap is:
 
