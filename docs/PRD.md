@@ -92,9 +92,9 @@ The Administrator does not have normal business-management write permissions, in
 
 # 5. Product Goal
 
-The goal of QubWatch is to give business owners and authorized managers better visibility into business activities and help them notice unusual activity that may otherwise be missed.
+The goal of QubWatch is to give small and medium-sized business owners and authorized managers better visibility into business activities and help them identify unusual patterns that may otherwise go unnoticed.
 
-The MVP should demonstrate the complete monitoring and investigation journey from business activity to resolution.
+The MVP should demonstrate the complete monitoring and investigation journey, from business activity and alert generation through review, investigation, evidence gathering, findings and resolution. QubWatch highlights activities that deserve attention; an alert is a signal for review, not proof of wrongdoing.
 
 ---
 
