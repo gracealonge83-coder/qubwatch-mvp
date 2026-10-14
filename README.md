@@ -37,6 +37,10 @@ QubWatch evaluates recorded activity against the monitoring rules configured by 
 
 ## The goal
 
+QubWatch gives small and medium-sized business owners and authorized managers better visibility into business activities and helps them identify unusual patterns that may otherwise go unnoticed.
+
+The MVP demonstrates the complete monitoring and investigation journey, from business activity and alert generation through review, investigation, evidence gathering, findings and resolution. QubWatch highlights activities that deserve attention; an alert is a signal for review, not proof of wrongdoing.
+
 QubWatch helps authorized business users to:
 
 1. Monitor business activities and transactions.
