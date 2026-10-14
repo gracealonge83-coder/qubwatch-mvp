@@ -147,11 +147,11 @@ The current implementation is a responsive web application and installable Progr
 
 ### Android and iOS
 
-QubWatch is intended to be available on Android and iOS as well as the web. Android and iOS are deployment/package targets of the same QubWatch product and should use the shared application backend/API.
+QubWatch is intended to be available on Android and iOS as well as the web, using the shared application backend/API.
 
-The existing responsive PWA provides the web and mobile UI foundation. The Android assessment APK has been packaged and the core workflow has been tested in the installed APK, including login, dashboard, transactions, owner-configured monitoring rules, alerts, investigations, backend/database connectivity, and AI-assisted analysis. The Android package uses the shared QubWatch backend/API; the repository does not contain a separate native Android codebase. iOS packaging and distribution remain future product work, and no native iOS implementation is currently present in the repository.
+The existing responsive PWA provides the web and mobile UI foundation. The Android assessment APK has been packaged, and its core workflow has been reported as tested in the installed APK, including login, dashboard, transactions, owner-configured monitoring rules, alerts, investigations, backend/database connectivity, and AI-assisted analysis. Continued validation of the assessment APK remains appropriate. The repository does not contain a separate native Android codebase. iOS packaging and distribution are future product work, and no native iOS implementation is currently present in the repository.
 
-The Android and iOS experiences should provide access to the core QubWatch monitoring workflow, prioritizing:
+The intended Android and iOS experiences should provide access to the core QubWatch monitoring workflow, prioritizing:
 
 * Dashboard
 * Alerts
@@ -185,7 +185,7 @@ The MVP includes:
 * Resolution
 * Basic evidence view
 * AI Assistant
-* In-app notifications
+* In-app alert and status experiences supported by the current interface; push notifications and external messaging are not included
 * Basic search and filtering
 * Basic activity/audit information
 * Backend API with database persistence for business, team, operational, and audit records
@@ -193,8 +193,9 @@ The MVP includes:
 * Server-enforced role permissions for sensitive actions
 * Complete UI states (loading, empty, success, error) for backend-connected operations
 * Server-side validation of all writes
-* Responsive web interface and installable PWA with mobile-responsive navigation/UI
-* Android and iOS deployment/package targets using the QubWatch product and shared backend/API
+* Responsive web interface and installable PWA with mobile-responsive navigation/UI (implemented)
+* Android assessment APK (packaged; core workflow reported tested) using the shared QubWatch backend/API
+* iOS packaging/distribution (future work, not part of the current delivered MVP)
 
 The PWA may cache application assets. QubWatch does not currently implement browser-local operational data storage as the system of record or operational-data offline synchronization.
 
@@ -202,7 +203,7 @@ The PWA may cache application assets. QubWatch does not currently implement brow
 
 # 10. MVP Features Not Included
 
-The following are outside the first MVP:
+The following are outside the first MVP, except where an assessment-only demonstration is explicitly noted below:
 
 * Advanced machine-learning anomaly detection
 * Autonomous investigations
@@ -366,17 +367,18 @@ The system should evaluate relevant business activity and generate an alert when
 
 ### Configurable Rules (MVP)
 
-Only the Business Owner can configure monitoring rules in Settings. Authorized Managers and Staff Users have read-only access to the rules and cannot change rule settings. The inventory-discrepancy rule is not configurable.
+Only the Business Owner can change configurable monitoring thresholds in Settings. Authorized Managers and Staff Users have read-only access to rule settings.
 
-Configurable rules and their defaults:
+The Business Owner can configure these rules, which have the following default values:
 
 * Large Transaction: above ₦500,000
 * Repeated Refunds: more than 3 within 120 minutes
 * Excessive Discount: 20% or more
 * Unusual Transaction Frequency: more than 5 transactions within 60 minutes
-* Inventory Discrepancy: stock vs expectedStock; not configurable
 
-Alerts are evaluated from the business's current recorded data. The first time a deterministic alert ID is generated, QubWatch stores an immutable snapshot of its reason, related IDs, evidence, generation time, and applicable rule values. Later reads do not duplicate or rewrite that snapshot when products, stock, or rule settings change. Existing statuses and investigation links remain attached to the stable alert ID. Because the previous implementation stored statuses but not reasons or evidence, alerts that stopped matching before migration 008 cannot be reconstructed exactly. Monitoring rule configuration is stored per business in the `business_rule_config` table. Each business has its own thresholds; existing customized values are migrated to the applicable business records, and new business configurations receive the documented defaults. The Business Owner can save custom values or restore the defaults above.
+The inventory discrepancy check is built in and is **not configurable in Settings**. QubWatch flags a difference between the stock recorded in the system and the expected stock. For example, if the system expects 50 loaves of bread but the recorded stock is 48, QubWatch flags the difference for review. A difference is a signal to investigate, not proof of theft or wrongdoing.
+
+Alerts are evaluated from the business's current recorded data. The first time a deterministic alert ID is generated, QubWatch stores an immutable snapshot of its reason, related IDs, evidence, generation time, and applicable rule values. Later reads do not duplicate or rewrite that snapshot when products, stock, or rule settings change. Existing statuses and investigation links remain attached to the stable alert ID. Because the previous implementation stored statuses but not reasons or evidence, alerts that stopped matching before migration 008 cannot be reconstructed exactly. Monitoring rule configuration is stored per business in the `business_rule_config` table. Each business has its own configurable thresholds; existing customized values are migrated to the applicable business records, and new business configurations receive the documented defaults. The Business Owner can save custom values or restore the defaults for the four configurable rules.
 
 ---
 
@@ -410,11 +412,15 @@ Example:
 
 ### Inventory Discrepancy
 
+This is a built-in check, not a configurable threshold.
+
 Example:
 
-> Recorded stock differs from expected stock.
+> The system expects 50 loaves of bread, but the recorded stock is 48. QubWatch flags the difference so an authorized user can check it.
 
-These thresholds are initial demonstration values and may be adjusted as the product is tested.
+The alert indicates a difference that may need review; it does not establish why the numbers differ or imply wrongdoing.
+
+The four configurable thresholds above are initial demonstration values and may be adjusted as the product is tested.
 
 ---
 
@@ -742,9 +748,9 @@ The MVP does NOT include:
 
 # 34. Mobile Application Requirements
 
-QubWatch targets web, Android, and iOS. The current responsive web application and installable PWA provide the mobile-responsive UI and navigation foundation and use the shared QubWatch backend/API. Android packaging/APK and iOS packaging/distribution are deployment targets; no native Android or iOS implementation is currently present in the repository.
+QubWatch targets web, Android, and iOS. The responsive web application and installable PWA are implemented and use the shared QubWatch backend/API. The Android assessment APK has been packaged and its core workflow has been reported as tested; continued validation remains appropriate. The repository does not contain a separate native Android codebase. iOS packaging and distribution remain future work, and no native iOS implementation is currently present in the repository.
 
-The mobile experience should provide a simple mobile-first experience for important monitoring activities.
+The intended mobile experience should provide a simple mobile-first experience for important monitoring activities. Android APK validation is ongoing; iOS packaging and distribution remain future work. Mobile requirements in this section describe the intended experience and should not be read as confirmation that every item is already implemented.
 
 ### Mobile Dashboard
 
@@ -952,16 +958,16 @@ The final technology choice for packaging/developing the installable Android and
 ## Stage 6 — Mobile Application
 
 * Responsive mobile web/PWA interface and navigation (implemented)
-* Validate Dashboard, Alerts, Transactions, Investigations, and AI Assistant on mobile
-* Prepare Android packaging/APK for the current assessment
-* Prepare iOS packaging and distribution for the intended product target
+* Continue validating Dashboard, Alerts, Transactions, Investigations, and AI Assistant on mobile
+* Continue validating the packaged Android assessment APK and its shared-backend connectivity
+* Prepare iOS packaging and distribution for the intended product target (future work)
 * Mobile platform testing
 
 ## Stage 7 — Testing and Demonstration
 
 * Test complete user journey
 * Test responsive web interface
-* Test the mobile-responsive PWA and the Android/iOS package targets
+* Test the mobile-responsive PWA and continue validation of the Android assessment APK; validate iOS when packaging becomes available
 * Fix errors
 * Review usability
 * Run production builds
@@ -990,7 +996,7 @@ The QubWatch MVP is ready for demonstration when a user can:
 15. Use the AI Assistant for human review and analysis.
 16. Perform the core workflow on a responsive web interface.
 17. Perform the key monitoring workflow using the installable PWA on mobile.
-18. Prepare the Android APK required for the current assessment; retain iOS packaging and distribution as an intended product target.
+18. Validate the packaged Android assessment APK and its shared-backend workflow; retain iOS packaging and distribution as future product work.
 
 The application should build successfully without blocking errors.
 
@@ -1155,9 +1161,9 @@ QubWatch is a deployed full-stack MVP with a React/Vite frontend, Express backen
 The current roadmap is:
 
 1. Validate the deployed full-stack implementation, error handling, and complete monitoring → alert → investigation → finding → resolution journey.
-2. Continue validation of the Android assessment APK and its shared-backend connectivity; the APK has been packaged and its core workflow has been tested.
-3. Continue iOS packaging and distribution preparation for the intended multi-platform product.
-4. Complete remaining responsive/PWA and mobile-platform validation and prepare future demonstrations.
+2. Continue validating the packaged Android assessment APK, its shared-backend connectivity, and the AI-assisted workflow.
+3. Treat iOS packaging and distribution as future product work.
+4. Complete remaining responsive/PWA validation and prepare future demonstrations.
 
 #### Project Status
 
@@ -1165,7 +1171,7 @@ The current roadmap is:
 
 **Current Status:** QubWatch is deployed on Render with a React/Vite frontend, Express backend/API, and production PostgreSQL hosted by Supabase. The application includes server-side authentication and sessions, role-based access control, business/team/product/transaction management, monitoring and alerting, investigations and audit records, server-side Groq AI assistance, and an owner-only Paystack Test Mode subscription integration. The responsive web application, mobile UI, and installable PWA are implemented. Local development can use SQLite when `DATABASE_URL` is not configured; production database connections use Supabase PostgreSQL through the Render backend's server-side `DATABASE_URL`.
 
-**What Comes Next:** Continue validating the deployed workflows and the already-packaged Android assessment APK, including the complete monitoring → alert → investigation → finding → resolution journey and the AI-assisted workflow on the installed APK. Continue iOS packaging/distribution preparation and any remaining platform validation; no separate native Android or iOS codebase is present in the repository.
+**What Comes Next:** Continue validating the deployed workflows and the packaged Android assessment APK, including the complete monitoring → alert → investigation → finding → resolution journey and the AI-assisted workflow on the installed APK. iOS packaging and distribution remain future product work; no separate native Android or iOS codebase is present in the repository.
 
 
 ## 44.9 Design Refinement Note
