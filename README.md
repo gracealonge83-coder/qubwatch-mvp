@@ -29,7 +29,7 @@ Examples include:
 - Unexpected or unusually large transactions
 - Unusual discount activity
 - Repeated refunds
-- Inventory discrepancies
+- Inventory discrepancies, such as when the recorded stock differs from the expected stock
 - Unusual transaction patterns or frequency
 - Unexpected changes in business records
 
@@ -70,8 +70,11 @@ The MVP uses rule-based monitoring for activities such as:
 - Repeated refunds
 - Excessive discounts
 - Unusual transaction frequency
+- Inventory discrepancies
 
-These rules generate alerts when recorded activity meets configured conditions. An alert is **not a conclusion of wrongdoing**; it gives an authorized user something specific to review.
+The Business Owner can configure the thresholds for large transactions, repeated refunds, discounts, and transaction frequency. The inventory check is built in: QubWatch flags a difference between the stock recorded in the system and the stock expected. For example, if 50 loaves of bread are expected but the recorded stock is 48, QubWatch flags the difference for review. This does not automatically mean theft or wrongdoing. Inventory discrepancy detection itself is not configurable in Settings.
+
+These checks generate alerts when the relevant conditions are met. An alert is **not a conclusion of wrongdoing**; it gives an authorized user something specific to review.
 
 The first generation of a deterministic alert ID is saved as an immutable snapshot, including its reason, generation time, related record IDs, generation-time evidence, and relevant rule values. Later Dashboard or Alerts reads do not create duplicates or rewrite the snapshot when product data or thresholds change. Alert statuses and investigation links remain attached to that stable ID.
 
@@ -143,7 +146,7 @@ QubWatch is initially designed for:
 
 ## Android assessment APK
 
-The assessment APK has been built and tested for the core QubWatch workflow, including login, dashboard, transactions, owner-configured monitoring rules, alerts, investigations, backend/database connectivity, and AI-assisted analysis. The Android package uses the QubWatch application UI and shared backend/API; the repository does not contain a separate native Android codebase. This assessment build demonstrates the working MVP and should not be confused with a fully hardened production mobile platform.
+The assessment APK has been packaged, and its core workflow has been reported as tested, including login, dashboard, transactions, owner-configured monitoring rules, alerts, investigations, backend/database connectivity, and AI-assisted analysis. The Android package uses the QubWatch application UI and shared backend/API; the repository does not contain a separate native Android codebase. Remaining work is continued validation of the assessment build, not initial APK preparation. This assessment build demonstrates the working MVP and should not be confused with a fully hardened production mobile platform.
 
 ## Security and Data Protection
 
