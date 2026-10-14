@@ -1,6 +1,6 @@
 # QubWatch
 
-## AI-Powered Business Monitoring and Investigation Application
+## Business Monitoring and Investigation Application
 
 **QubWatch — See what deserves your utmost attention.**
 
