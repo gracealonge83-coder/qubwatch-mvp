@@ -34,7 +34,7 @@ An alert indicates that something may require attention. It does not automatical
 
 # 3. Problem Statement
 
-Owners of high-transaction, inventory-based businesses cannot personally monitor every sale, refund, discount, and stock movement throughout the day. Some rely on authorized managers and the reports they receive. Others operate without a dedicated manager or spend significant time away from their business premises.
+Owners of high-transaction, inventory-based businesses cannot personally monitor every sale, refund, discount, and stock movement throughout the day. Some rely on "their" managers and the reports they receive. Others operate without a dedicated manager or spend significant time away from their business premises.
 
 Reports are necessary, but summaries do not always make unusual transactions or recurring patterns easy to identify. Owners still need visibility into what deserves closer attention without manually checking every record or constantly contacting staff. Some small and medium-sized businesses also cannot afford expensive monitoring systems.
 
