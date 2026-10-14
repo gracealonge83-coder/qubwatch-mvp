@@ -1047,7 +1047,7 @@ QubWatch is implemented as a full-stack application:
 
 **React/Vite frontend and installable PWA → Express API → SQLite for local development or Supabase-hosted PostgreSQL in production**
 
-The production application is deployed on Render at https://qubwatch.onrender.com, which serves the production frontend and Express API. The frontend communicates with the API through routes under `/api`; the backend validates writes, applies server-side authentication and role checks and persists production application data in Supabase-hosted PostgreSQL through the Render backend's server-side `DATABASE_URL`. Local development can use SQLite when `DATABASE_URL` is unset. Netlify Deploy Preview URLs generated for pull requests are review previews and are not the production deployment.
+The production application is deployed on Render at https://qubwatch.onrender.com, which serves the production frontend and Express API. The frontend communicates with the API through routes under `/api`; the backend validates writes, applies server-side authentication and role checks and persists production application data in Supabase-hosted PostgreSQL through the Render backend's server-side `DATABASE_URL`. Local development can use SQLite when `DATABASE_URL` is unset.
 
 ## 44.2 Technology Stack
 
