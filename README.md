@@ -185,7 +185,6 @@ SQLite is used locally when `DATABASE_URL` is not configured. PostgreSQL uses `D
 
 QubWatch's production application is deployed on Render: [https://qubwatch.onrender.com](https://qubwatch.onrender.com). The Render service serves the production frontend and Express API, while production PostgreSQL is hosted by Supabase. Local Vite development continues to use the local API setup and proxy `/api` to `localhost:3001`.
 
-Pull requests may also receive a temporary Netlify Deploy Preview, such as [PR #1's preview](https://deploy-preview-1--qubwatch.netlify.app). That preview is for reviewing the pull request and is separate from the production deployment on Render.
 
 ### Production Security Considerations
 
