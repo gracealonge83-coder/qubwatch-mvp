@@ -20,7 +20,7 @@ Alerts are based on configured monitoring rules and available business records. 
 
 ## The problem
 
-Owners of high-transaction, inventory-based businesses cannot personally monitor every sale, refund, discount and stock movement throughout the day. Some rely on authorized managers and the reports they receive. Others operate without a dedicated manager, or spend significant time away from their business premises.
+Owners of high-transaction, inventory-based businesses cannot personally monitor every sale, refund, discount and stock movement throughout the day. Some rely on "their" managers and the reports they receive. Others operate without a dedicated manager, or spend significant time away from their business premises.
 
 Reports are important, but a summary of recorded activity does not always make unusual transactions or recurring patterns easy to identify. Owners still need visibility into what deserves closer attention without manually checking every record, constantly contacting staff, or investing in expensive monitoring systems that may be beyond the budget of a small and medium-sized business.
 
