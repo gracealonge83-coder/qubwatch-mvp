@@ -64,7 +64,7 @@ QubWatch helps authorized business users to:
 | Alerts | Flag activity such as large transactions, repeated refunds, excessive discounts and unusual transaction frequency. |
 | Investigation | Review alerts and related records; document notes, findings and resolutions. |
 | AI Assistant | Server-side Groq AI integration for questions about authorized QubWatch records. Responses support human review and do not replace it. |
-| Audit | Record important system and business actions for accountability and review. |
+| Audit | Record selected transaction, alert-status and investigation actions for accountability; audit coverage is incomplete. |
 
 ## Monitoring and alerts
 
@@ -125,7 +125,7 @@ QubWatch uses role-based access control so users receive access according to the
 - **Staff User**
 - **Administrator**
 
-The initial product focus is on business owners and authorized managers who need visibility into business activity. Access is role-based for supported backend routes; permissions vary by role and feature.
+The initial product focus is on business owners and authorized managers who need visibility into business activity. Access is role-based for supported backend routes; permissions vary by role and feature. Only the Business Owner can change configurable monitoring thresholds in Settings; Authorized Managers and Staff Users have read-only access to those settings. Inventory discrepancy detection is built in and is not configurable.
 
 ## Target users
 
