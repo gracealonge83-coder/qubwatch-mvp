@@ -20,18 +20,20 @@ Alerts are based on configured monitoring rules and available business records. 
 
 ## The problem
 
-Many business owners rely on employees and managers to handle sales, inventory, cash, products and daily transactions. When the owner is away or unable to supervise operations, unusual activities or losses may be difficult to notice quickly.
+Owners of high-transaction, inventory-based businesses cannot personally monitor every sale, refund, discount and stock movement throughout the day. Some rely on authorized managers and the reports they receive. Others operate without a dedicated manager, or spend significant time away from their business premises.
+
+Reports are important, but a summary of recorded activity does not always make unusual transactions or recurring patterns easy to identify. Owners still need visibility into what deserves closer attention without manually checking every record, constantly contacting staff, or investing in expensive monitoring systems that may be beyond a smaller business's budget.
 
 Examples include:
 
 - Unexpected or unusually large transactions
-- Unauthorized or unusually large discounts
+- Unusual discount activity
 - Repeated refunds
 - Inventory discrepancies
 - Unusual transaction patterns or frequency
 - Unexpected changes in business records
 
-Traditional business records can show **what happened** without clearly highlighting **what deserves utmost attention**. QubWatch evaluates recorded activiies against configured monitoring rules and brings potentially unusual patterns to authorized users' attention.
+QubWatch evaluates recorded activity against the monitoring rules configured by the business owner. It brings potentially unusual activity to authorized users' attention, helps explain alerts with AI, and supports investigation while leaving the final decision to the responsible human.
 
 ## The goal
 
@@ -69,7 +71,7 @@ The MVP uses rule-based monitoring for activities such as:
 - Excessive discounts
 - Unusual transaction frequency
 
-These rules generate alerts when recorded activities meets configured conditions. An alert is **not a conclusion of wrongdoing**; it gives an authorized user something specific to review.
+These rules generate alerts when recorded activity meets configured conditions. An alert is **not a conclusion of wrongdoing**; it gives an authorized user something specific to review.
 
 The first generation of a deterministic alert ID is saved as an immutable snapshot, including its reason, generation time, related record IDs, generation-time evidence, and relevant rule values. Later Dashboard or Alerts reads do not create duplicates or rewrite the snapshot when product data or thresholds change. Alert statuses and investigation links remain attached to that stable ID.
 
@@ -139,6 +141,10 @@ QubWatch is initially designed for:
 - **PWA:** `vite-plugin-pwa`
 - **Styling:** CSS
 
+## Android assessment APK
+
+The assessment APK has been built and tested for the core QubWatch workflow, including login, dashboard, transactions, owner-configured monitoring rules, alerts, investigations, backend/database connectivity, and AI-assisted analysis. The Android package uses the QubWatch application UI and shared backend/API; the repository does not contain a separate native Android codebase. This assessment build demonstrates the working MVP and should not be confused with a fully hardened production mobile platform.
+
 ## Security and Data Protection
 
 ### Authentication and sessions
@@ -174,11 +180,11 @@ QubWatch is deployed on Render, which serves the production frontend and Express
 
 ### Production Security Considerations
 
-QubWatch remains assessment/demo oriented and is not presented as a production-ready, fully hardened multi-tenant SaaS platform. Core business records used by AI, products, transactions, investigations, and alerts are scoped to the authenticated user's business. Monitoring rule configuration is currently a shared singleton rather than per-business configuration, so this MVP does not claim a complete enterprise isolation boundary.
+QubWatch remains assessment/demo oriented and is not presented as a production-ready, fully hardened multi-tenant SaaS platform. Core business records used by AI, products, transactions, investigations, alerts, and monitoring rules are scoped to the authenticated user's business. Monitoring rules are stored per business; the Business Owner can change the rule values, while other roles have read-only access to the rules screen. This does not make the overall platform a fully hardened enterprise system.
 
 Audit entries emitted for transaction creation, alert status changes, and investigation operations are written in the same SQLite/PostgreSQL transaction as those operations. The audit trail is not complete, immutable, or tamper-evident; other operations such as product and monitoring-rule changes do not currently create audit entries. This MVP does not establish encryption-at-rest, backup or disaster-recovery guarantees, penetration testing, or regulatory compliance.
 
-QubWatch is currently deployed on Render with Supabase-hosted PostgreSQL. Additional production hardening remains appropriate, including business-scoped monitoring rules, secure environment-variable and secret management, validated PostgreSQL TLS, and appropriate operational controls. This remains an assessment/MVP product and should not be presented as a fully hardened multi-tenant SaaS.
+QubWatch is currently deployed on Render with Supabase-hosted PostgreSQL. Additional production hardening remains appropriate, including complete audit coverage, secure environment-variable and secret management, validated PostgreSQL TLS, backup and recovery procedures, and appropriate operational controls. This remains an assessment/MVP product and should not be presented as a fully hardened multi-tenant SaaS.
 
 ## Run locally
 
