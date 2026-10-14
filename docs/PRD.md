@@ -868,7 +868,7 @@ Record IDs defined below are preserved unchanged and serve as primary keys; the 
 
 ---
 
-# 38. Technology Direction
+# 38. Android and iOS Packaging Status
 
 The QubWatch MVP should be developed with a technology structure that can support both web and mobile experiences.
 
@@ -969,7 +969,7 @@ The QubWatch MVP is ready for demonstration when a user can:
 15. Use the AI Assistant for human review and analysis.
 16. Perform the core workflow on a responsive web interface.
 17. Perform the key monitoring workflow using the installable PWA on mobile.
-18. The Android assessment APK is packaged and its core workflow has been reported as tested; continue validation of its shared-backend workflow. iOS packaging and distribution remain future product work.
+18. Validate the packaged Android assessment APK and its shared-backend workflow; retain iOS packaging and distribution as future work.
 
 The application should build successfully without blocking errors.
 
