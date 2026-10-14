@@ -36,7 +36,7 @@ An alert indicates that something may require attention. It does not automatical
 
 Owners of high-transaction, inventory-based businesses cannot personally monitor every sale, refund, discount, and stock movement throughout the day. Some rely on authorized managers and the reports they receive. Others operate without a dedicated manager or spend significant time away from their business premises.
 
-Reports are necessary, but summaries do not always make unusual transactions or recurring patterns easy to identify. Owners still need visibility into what deserves closer attention without manually checking every record or constantly contacting staff. Some smaller businesses also cannot afford expensive monitoring systems.
+Reports are necessary, but summaries do not always make unusual transactions or recurring patterns easy to identify. Owners still need visibility into what deserves closer attention without manually checking every record or constantly contacting staff. Some small and medium-sized businesses also cannot afford expensive monitoring systems.
 
 Examples include:
 
@@ -366,7 +366,7 @@ The system should evaluate relevant business activity and generate an alert when
 
 ### Configurable Rules (MVP)
 
-The Business Owner may modify monitoring rule values in Settings. Authorized Managers and Staff Users have read-only access to monitoring rules and cannot change their values.
+Only the Business Owner can configure monitoring rules in Settings. Authorized Managers and Staff Users have read-only access to the rules and cannot change rule settings. The inventory-discrepancy rule is not configurable.
 
 Configurable rules and their defaults:
 
