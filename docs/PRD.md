@@ -185,7 +185,7 @@ The MVP includes:
 * Resolution
 * Basic evidence view
 * AI Assistant
-* In-app alert and status experiences supported by the current interface; push notifications and external messaging are not included
+* In-app alert and status views supported by the current interface; the MVP does not provide separate push, email, SMS or WhatsApp notification delivery
 * Basic search and filtering
 * Basic activity/audit information
 * Backend API with database persistence for business, team, operational and audit records
@@ -635,19 +635,9 @@ The system should clearly distinguish recorded information from possible explana
 
 # 30. Notifications
 
-QubWatch should provide in-app notifications for important events.
+The current MVP provides in-app alert and status experiences through the application interface. These are not a separate notification-delivery service and should not be described as push notifications.
 
-Examples:
-
-* New alert
-* Alert requiring review
-* Investigation opened
-* Investigation updated
-* Investigation resolved
-
-The MVP should prioritize in-app notifications.
-
-External notification channels can be added later.
+Push notifications and external delivery by email, SMS or WhatsApp are not included in the current MVP. These channels may be considered for future development.
 
 ---
 
@@ -681,26 +671,9 @@ Date filtering is a future enhancement; it is not currently available in the Tra
 
 # 32. Audit Information
 
-QubWatch should maintain basic records of important user actions.
+The current MVP records selected actions for accountability, including transaction creation, alert-status changes and investigation operations. Audit coverage is incomplete; product changes and monitoring-rule changes do not currently create audit entries. Alert creation itself is not recorded as an audit event.
 
-Examples:
-
-* Transaction created
-* Alert reviewed
-* Investigation opened
-* Investigation note added
-* Finding recorded
-* Investigation resolved
-* Investigation closed
-
-Alert creation is not currently recorded as an audit event.
-
-Where appropriate, records should include:
-
-* User
-* Action
-* Date
-* Time
+Where recorded, audit entries include action and associated user/time information as supported by the implementation. The audit trail is not complete, immutable or tamper-evident and should not be presented as a comprehensive security log.
 
 ---
 
@@ -724,7 +697,7 @@ Limited role-based access appropriate to staff activities, including recording t
 
 Review/read-oriented access to permitted business information and AI assistance, without normal business-management write permissions for teams, products, monitoring rules, transaction status or other management functions.
 
-Permissions are role-based; the MVP does not provide a granular custom-permission or permission-builder system. Business Owners can assign or manage roles where the application permits it.
+Only the Business Owner can change configurable monitoring thresholds in Settings. Authorized Managers and Staff Users have read-only access to those settings. Inventory discrepancy detection is built in and is not configurable. Permissions are role-based; the MVP does not provide a granular custom-permission or permission-builder system. Business Owners can assign or manage roles where the application permits it.
 
 ---
 
@@ -908,7 +881,7 @@ The current development project begins with:
 
 The architecture should be kept modular so that shared business logic and UI concepts can later support the mobile application.
 
-The final technology choice for packaging/developing the installable Android and iOS application should be made during the implementation stage based on the MVP requirements and available development resources.
+The Android assessment APK has already been packaged and its core workflow has been reported as tested. The current Android package uses the QubWatch application UI and shared backend/API; this repository does not contain a separate native Android codebase. Continued validation of the assessment build remains appropriate. iOS packaging and distribution are future work; no native iOS implementation is currently present in the repository.
 
 ---
 
@@ -959,7 +932,7 @@ The final technology choice for packaging/developing the installable Android and
 
 * Responsive mobile web/PWA interface and navigation (implemented)
 * Continue validating Dashboard, Alerts, Transactions, Investigations and AI Assistant on mobile
-* Continue validating the packaged Android assessment APK and its shared-backend connectivity
+* Continue validation of the already-packaged Android assessment APK and its shared-backend connectivity
 * Prepare iOS packaging and distribution for the intended product target (future work)
 * Mobile platform testing
 
@@ -967,7 +940,7 @@ The final technology choice for packaging/developing the installable Android and
 
 * Test complete user journey
 * Test responsive web interface
-* Test the mobile-responsive PWA and continue validation of the Android assessment APK; validate iOS when packaging becomes available
+* Continue validating the mobile-responsive PWA and packaged Android assessment APK; validate iOS when packaging becomes available
 * Fix errors
 * Review usability
 * Run production builds
@@ -996,7 +969,7 @@ The QubWatch MVP is ready for demonstration when a user can:
 15. Use the AI Assistant for human review and analysis.
 16. Perform the core workflow on a responsive web interface.
 17. Perform the key monitoring workflow using the installable PWA on mobile.
-18. Validate the packaged Android assessment APK and its shared-backend workflow; retain iOS packaging and distribution as future product work.
+18. The Android assessment APK is packaged and its core workflow has been reported as tested; continue validation of its shared-backend workflow. iOS packaging and distribution remain future product work.
 
 The application should build successfully without blocking errors.
 
