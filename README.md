@@ -4,7 +4,7 @@
 
 **QubWatch — See what deserves your utmost attention.**
 
-QubWatch is a business monitoring and investigation platform for business owners and authorized managers. It helps them identify unusual business activities, review operational patterns and investigate transactions and events.
+QubWatch is a business monitoring and investigation platform for small and medium-sized businesses, designed for business owners and their authorized managers. It helps them identify unusual business activities, review operational patterns and investigate transactions and events.
 
 It is designed especially for inventory-based, high-transaction businesses such as supermarkets, retail shops and pharmacies where owners and managers may not always be available to supervise daily operations.
 
@@ -22,7 +22,7 @@ Alerts are based on configured monitoring rules and available business records. 
 
 Owners of high-transaction, inventory-based businesses cannot personally monitor every sale, refund, discount and stock movement throughout the day. Some rely on authorized managers and the reports they receive. Others operate without a dedicated manager, or spend significant time away from their business premises.
 
-Reports are important, but a summary of recorded activity does not always make unusual transactions or recurring patterns easy to identify. Owners still need visibility into what deserves closer attention without manually checking every record, constantly contacting staff, or investing in expensive monitoring systems that may be beyond a smaller business's budget.
+Reports are important, but a summary of recorded activity does not always make unusual transactions or recurring patterns easy to identify. Owners still need visibility into what deserves closer attention without manually checking every record, constantly contacting staff, or investing in expensive monitoring systems that may be beyond the budget of a small and medium-sized business.
 
 Examples include:
 
@@ -180,7 +180,7 @@ QubWatch is deployed on Render, which serves the production frontend and Express
 
 ### Production Security Considerations
 
-QubWatch remains assessment/demo oriented and is not presented as a production-ready, fully hardened multi-tenant SaaS platform. Core business records used by AI, products, transactions, investigations, alerts, and monitoring rules are scoped to the authenticated user's business. Monitoring rules are stored per business; the Business Owner can change the rule values, while other roles have read-only access to the rules screen. This does not make the overall platform a fully hardened enterprise system.
+QubWatch remains assessment/demo oriented and is not presented as a production-ready, fully hardened multi-tenant SaaS platform. Core business records used by AI, products, transactions, investigations, alerts, and monitoring rules are scoped to the authenticated user's business. Monitoring rules are stored per business. Only the Business Owner can configure monitoring rules in Settings; Authorized Managers and Staff Users have read-only access and cannot change rule settings. The inventory-discrepancy rule is not configurable. This does not make the overall platform a fully hardened enterprise system.
 
 Audit entries emitted for transaction creation, alert status changes, and investigation operations are written in the same SQLite/PostgreSQL transaction as those operations. The audit trail is not complete, immutable, or tamper-evident; other operations such as product and monitoring-rule changes do not currently create audit entries. This MVP does not establish encryption-at-rest, backup or disaster-recovery guarantees, penetration testing, or regulatory compliance.
 
